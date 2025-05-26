@@ -77,7 +77,7 @@ for WKCLUSTER in $(echo "$WORKLOADCLUSTERS" | awk 'NR>1 {print $2}' | tail -n +2
     WKCLUSTERJSON=$(kubectl get cluster $WKCLUSTER -n $CLUSTERNAMESPACE -o json)
     WORKLOADCLUSTERPROVIDER=$(echo "${WKCLUSTERJSON}" | jq -r '.metadata.labels."cluster.x-k8s.io/provider"')
     # need to expand for non nutanix providers
-    select case $WORKLOADCLUSTERPROVIDER in
+    case $WORKLOADCLUSTERPROVIDER in
         "nutanix")
             echo "  Nutanix provider: $WORKLOADCLUSTERPROVIDER"
             #get the machine image version
