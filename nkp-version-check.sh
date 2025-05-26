@@ -17,8 +17,14 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #------------------------------------------------------------------------------
+version_gt() { 
+  test "$(echo -e "$1\n$2" | sort -V | head -n1)" != "$1"
+}
+#------------------------------------------------------------------------------
 
-echo "Checking nkp version..."
+echo
+echo "Checking nkp cli version..."
+echo 
 #check which version of nkp is installed
 if ! command -v nkp &> /dev/null; then
     echo "nkp command not found. Please install nkp first."
@@ -26,7 +32,7 @@ if ! command -v nkp &> /dev/null; then
 fi
 # Get the installed version of nkp
 NKPVER=$(nkp version |grep nkp |awk '{print $2}')
-echo "Installed nkp version: $NKPVER"
+echo "NKP cli version: $NKPVER"
 
 #Select management cluster kubectl context
 if ! command -v kubectl &> /dev/null; then
@@ -48,15 +54,31 @@ kubectl config use-context $CLUSTERCTX
 
 #get nkp management cluster version
 NKPMGMTCLUSTER=$(kubectl get cluster -n default -o jsonpath='{.items[0].metadata.name}')
+echo
 echo "Nkp Management Cluster: $NKPMGMTCLUSTER"
 #get provider
 NKPPROVIDER=$(kubectl get cluster $NKPMGMTCLUSTER -n default -o json |jq -r '.metadata.labels."cluster.x-k8s.io/provider"')
+echo
 echo "Nkp Management Cluster Provider: $NKPPROVIDER"
 
 #Get the version of kommander
 KOMMANDERVERSION=$(kubectl get hr -n kommander kommander-appmanagement -o jsonpath='{.spec.chart.spec.version}')
+echo
 echo "Kommander Version: $KOMMANDERVERSION"
-
+#compare cli version with management cluster version
+if [[ "$NKPVER" == "$KOMMANDERVERSION" ]]; then
+    echo "  NKP CLI version matches Kommander version."
+    echo "  Skip kommander upgrade"
+else
+    #check if cli version is higher than management cluster version 
+    if version_gt "$NKPVER" "$KOMMANDERVERSION"; then
+        echo "$NKPVER is higher than $KOMMANDERVERSION"
+        echo "upgrade kommander is recommended."
+    else
+        echo "$KOMMANDERVERSION is higher than $v2"
+        echo "upgrade NKP CLI is recommended."
+    fi
+fi
 # Get the version of the kubernetes cluster
 KUBERNETESVERSION=$(kubectl version | grep Server | awk '{print $3}')
 echo "Kubernetes Version: $KUBERNETESVERSION"
