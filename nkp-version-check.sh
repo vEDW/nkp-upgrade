@@ -52,14 +52,19 @@ done
 
 kubectl config use-context $CLUSTERCTX
 
+#check if this is a NKP Management cluster
+KOMANDERCRD=$(kubectl  api-resources |grep kommander)
+if [[ -z "$KOMANDERCRD" ]]; then
+    echo "This is not a NKP Management Cluster. Please select a valid management cluster."
+    exit 1
+fi
 #get nkp management cluster version
 NKPMGMTCLUSTER=$(kubectl get cluster -n default -o jsonpath='{.items[0].metadata.name}')
 echo
-echo "Nkp Management Cluster: $NKPMGMTCLUSTER"
+echo "NKP Management Cluster name: $NKPMGMTCLUSTER"
 #get provider
 NKPPROVIDER=$(kubectl get cluster $NKPMGMTCLUSTER -n default -o json |jq -r '.metadata.labels."cluster.x-k8s.io/provider"')
-echo
-echo "Nkp Management Cluster Provider: $NKPPROVIDER"
+echo "NKP Management Cluster Provider: $NKPPROVIDER"
 
 #Get the version of kommander
 KOMMANDERVERSION=$(kubectl get hr -n kommander kommander-appmanagement -o jsonpath='{.spec.chart.spec.version}')
