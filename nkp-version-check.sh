@@ -101,7 +101,8 @@ else
 fi
 # Get the version of the kubernetes cluster
 KUBERNETESVERSION=$(kubectl version | grep Server | awk '{print $3}')
-echo " NKP Management Cluster Kubernetes Version: $KUBERNETESVERSION"
+echo
+echo "NKP Management Cluster Kubernetes Version: $KUBERNETESVERSION"
 # Check if the kubernetes version is compatible with the nkp version
 
 if [[ "$CLIK8SVERSION"  == "$KUBERNETESVERSION" ]]; then
@@ -110,11 +111,11 @@ if [[ "$CLIK8SVERSION"  == "$KUBERNETESVERSION" ]]; then
 else
     #check if cli version is higher than management cluster version 
     if version_gt "$CLIK8SVERSION" "$KUBERNETESVERSION"; then
-        echo "$CLIK8SVERSION is higher than $KUBERNETESVERSION"
-        echo "upgrade mgmt cluster is recommended."
+        echo "  $CLIK8SVERSION is higher than $KUBERNETESVERSION"
+        echo "  upgrade mgmt cluster is recommended."
     else
-        echo "$KUBERNETESVERSION is higher than $CLIK8SVERSION"
-        echo "upgrade NKP CLI is recommended."
+        echo "  $KUBERNETESVERSION is higher than $CLIK8SVERSION"
+        echo "  upgrade NKP CLI is recommended."
     fi
 fi
 
