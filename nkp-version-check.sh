@@ -120,6 +120,7 @@ fi
 
 #List workload clusters
 WORKLOADCLUSTERS=$(kubectl get cluster -A |grep -v default)
+echo
 echo "Workload Clusters:"
 echo "$WORKLOADCLUSTERS"
 echo
@@ -128,8 +129,8 @@ echo
 for WKCLUSTER in $(echo "$WORKLOADCLUSTERS" | awk 'NR>1 {print $2}'); do
     CLUSTERNAMESPACE=$(echo "$WORKLOADCLUSTERS" |grep $WKCLUSTER | awk '{print $1}')
     KUBERNETESVERSION=$(kubectl get cluster $WKCLUSTER -n $CLUSTERNAMESPACE -o json | jq -r '.spec.topology.version')
-    echo "Workload Cluster: $WKCLUSTER, namespace: $CLUSTERNAMESPACE, Version: $WORKLOADCLUSTERVERSION"
-    echo " NKP Management Cluster Kubernetes Version: $KUBERNETESVERSION"
+    echo "  Workload Cluster: $WKCLUSTER, namespace: $CLUSTERNAMESPACE, Version: $WORKLOADCLUSTERVERSION"
+    echo "      Kubernetes Version: $KUBERNETESVERSION"
     # Check if the kubernetes version is compatible with the nkp version
 
     if [[ "$CLIK8SVERSION"  == "$KUBERNETESVERSION" ]]; then
@@ -138,8 +139,8 @@ for WKCLUSTER in $(echo "$WORKLOADCLUSTERS" | awk 'NR>1 {print $2}'); do
     else
         #check if cli version is higher than management cluster version 
         if version_gt "$CLIK8SVERSION" "$KUBERNETESVERSION"; then
-            echo "$CLIK8SVERSION is higher than $KUBERNETESVERSION"
-            echo "upgrade cluster is recommended."
+            echo "      $CLIK8SVERSION is higher than $KUBERNETESVERSION"
+            echo "      upgrade cluster is recommended."
 
             #Get the provider for each workload cluster
             WKCLUSTERJSON=$(kubectl get cluster $WKCLUSTER -n $CLUSTERNAMESPACE -o json)
@@ -147,17 +148,17 @@ for WKCLUSTER in $(echo "$WORKLOADCLUSTERS" | awk 'NR>1 {print $2}'); do
             # need to expand for non nutanix providers
             case $WORKLOADCLUSTERPROVIDER in
                 "nutanix")
-                    echo "  Nutanix provider: $WORKLOADCLUSTERPROVIDER"
+                    echo "      Nutanix provider: $WORKLOADCLUSTERPROVIDER"
                     #get the machine image version
                     NKPCPIMAGE=$(echo "${WKCLUSTERJSON}" |jq -r '.spec.topology.variables[].value.controlPlane.nutanix.machineDetails.image.name')
-                    echo "  Nutanix Control Plane Image: $NKPCPIMAGE"
+                    echo "      Nutanix Control Plane Image: $NKPCPIMAGE"
                     #get the worker image version
                     #need to create loop if more than 1 machineDeployment
                     WKRIMAGE=$(echo "${WKCLUSTERJSON}" |jq -r '.spec.topology.workers.machineDeployments[].variables.overrides[].value.nutanix.machineDetails.image.name')
-                    echo "  Nutanix Worker Image: $WKRIMAGE"
+                    echo "      Nutanix Worker Image: $WKRIMAGE"
                     ;;
                 *)
-                    echo "  other provider: $WORKLOADCLUSTERPROVIDER"
+                    echo "      other provider: $WORKLOADCLUSTERPROVIDER"
                     exit 1
                     ;;
             esac
