@@ -131,7 +131,7 @@ echo "NKP Edition: $LICENSECRD"
 echo
 
 # Get the list of workspaces
-WORKSPACES=$(kubectl get workspaces)
+WORKSPACES=$(kubectl get workspaces -o json |jq -r '["workspace","namespace","version" ], (.items[]|[.metadata.name,.spec.namespaceName,.status.version])|@tsv' |column -t)
 echo "Workspaces:"
 echo
 echo "$WORKSPACES"
