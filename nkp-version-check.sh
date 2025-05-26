@@ -118,10 +118,23 @@ else
     fi
 fi
 
-#List workload clusters
+#------------------------------------------------------------------------------
+# Check workspace application versions
+
+#check NKP edition
+LICENSECRD=$(kubectl get licenses -n kommander -o json |jq -r '.items[].status.dkpLevel')
+echo
+echo "NKP Edition: $LICENSECRD"
+echo
+
+
+
+#------------------------------------------------------------------------------
+# Check workload clusters
 WORKLOADCLUSTERS=$(kubectl get cluster -A |grep -v default)
 echo
 echo "Workload Clusters:"
+echo
 echo "$WORKLOADCLUSTERS"
 echo
 
