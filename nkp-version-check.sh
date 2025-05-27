@@ -182,59 +182,63 @@ fi
 
 #------------------------------------------------------------------------------
 # Check workload clusters
-WORKLOADCLUSTERS=$(kubectl get cluster -A |grep -v default)
-echo
-echo "Workload Clusters:"
-echo
-echo "$WORKLOADCLUSTERS"
-echo
 WKCLUSTERUPGRADEREQUIRED=0
+WORKLOADCLUSTERS=$(kubectl get cluster -A --no-headers |grep -v default)
+#check if workload clusters are found
+if [[ -z "$WORKLOADCLUSTERS" ]]; then
+    echo "No workload clusters found. Please check if the workload clusters are created."
+else
+    echo
+    echo "Workload Clusters:"
+    echo
+    echo "$WORKLOADCLUSTERS"
+    echo
+    # Get the version of each workload cluster
+    for WKCLUSTER in $(echo "$WORKLOADCLUSTERS" | awk '{print $2}'); do
+        CLUSTERNAMESPACE=$(echo "$WORKLOADCLUSTERS" |grep $WKCLUSTER | awk '{print $1}')
+        KUBERNETESVERSION=$(kubectl get cluster $WKCLUSTER -n $CLUSTERNAMESPACE -o json | jq -r '.spec.topology.version')
+        echo "  Workload Cluster: $WKCLUSTER, namespace: $CLUSTERNAMESPACE, Version: $WORKLOADCLUSTERVERSION"
+        echo "      Kubernetes Version: $KUBERNETESVERSION"
+        # Check if the kubernetes version is compatible with the nkp version
 
-# Get the version of each workload cluster
-for WKCLUSTER in $(echo "$WORKLOADCLUSTERS" | awk 'NR>1 {print $2}'); do
-    CLUSTERNAMESPACE=$(echo "$WORKLOADCLUSTERS" |grep $WKCLUSTER | awk '{print $1}')
-    KUBERNETESVERSION=$(kubectl get cluster $WKCLUSTER -n $CLUSTERNAMESPACE -o json | jq -r '.spec.topology.version')
-    echo "  Workload Cluster: $WKCLUSTER, namespace: $CLUSTERNAMESPACE, Version: $WORKLOADCLUSTERVERSION"
-    echo "      Kubernetes Version: $KUBERNETESVERSION"
-    # Check if the kubernetes version is compatible with the nkp version
-
-    if [[ "$CLIK8SVERSION"  == "$KUBERNETESVERSION" ]]; then
-        echo "  NKP CLI k8s version matches Mgmt cluster k8s version."
-        echo "  Skip cluster kubernetes upgrade"
-    else
-        #check if cli version is higher than management cluster version 
-        if version_gt "$CLIK8SVERSION" "$KUBERNETESVERSION"; then
-            echo "      $CLIK8SVERSION is higher than $KUBERNETESVERSION"
-            echo "      upgrade cluster is recommended."
-            #increase the upgrade required counter
-            WKCLUSTERUPGRADEREQUIRED=$((WKCLUSTERUPGRADEREQUIRED + 1))
-            #Get the provider for each workload cluster
-            WKCLUSTERJSON=$(kubectl get cluster $WKCLUSTER -n $CLUSTERNAMESPACE -o json)
-            WORKLOADCLUSTERPROVIDER=$(echo "${WKCLUSTERJSON}" | jq -r '.metadata.labels."cluster.x-k8s.io/provider"')
-            # need to expand for non nutanix providers
-            case $WORKLOADCLUSTERPROVIDER in
-                "nutanix")
-                    echo "      Nutanix provider: $WORKLOADCLUSTERPROVIDER"
-                    #get the machine image version
-                    NKPCPIMAGE=$(echo "${WKCLUSTERJSON}" |jq -r '.spec.topology.variables[].value.controlPlane.nutanix.machineDetails.image.name')
-                    echo "      Nutanix Control Plane Image: $NKPCPIMAGE"
-                    #get the worker image version
-                    #need to create loop if more than 1 machineDeployment
-                    WKRIMAGE=$(echo "${WKCLUSTERJSON}" |jq -r '.spec.topology.workers.machineDeployments[].variables.overrides[].value.nutanix.machineDetails.image.name')
-                    echo "      Nutanix Worker Image: $WKRIMAGE"
-                    ;;
-                *)
-                    echo "      other provider: $WORKLOADCLUSTERPROVIDER"
-                    exit 1
-                    ;;
-            esac
-            echo
+        if [[ "$CLIK8SVERSION"  == "$KUBERNETESVERSION" ]]; then
+            echo "  NKP CLI k8s version matches Mgmt cluster k8s version."
+            echo "  Skip cluster kubernetes upgrade"
         else
-            echo "$KUBERNETESVERSION is higher than $CLIK8SVERSION"
-            echo "upgrade NKP CLI is recommended."
+            #check if cli version is higher than management cluster version 
+            if version_gt "$CLIK8SVERSION" "$KUBERNETESVERSION"; then
+                echo "      $CLIK8SVERSION is higher than $KUBERNETESVERSION"
+                echo "      upgrade cluster is recommended."
+                #increase the upgrade required counter
+                WKCLUSTERUPGRADEREQUIRED=$((WKCLUSTERUPGRADEREQUIRED + 1))
+                #Get the provider for each workload cluster
+                WKCLUSTERJSON=$(kubectl get cluster $WKCLUSTER -n $CLUSTERNAMESPACE -o json)
+                WORKLOADCLUSTERPROVIDER=$(echo "${WKCLUSTERJSON}" | jq -r '.metadata.labels."cluster.x-k8s.io/provider"')
+                # need to expand for non nutanix providers
+                case $WORKLOADCLUSTERPROVIDER in
+                    "nutanix")
+                        echo "      Nutanix provider: $WORKLOADCLUSTERPROVIDER"
+                        #get the machine image version
+                        NKPCPIMAGE=$(echo "${WKCLUSTERJSON}" |jq -r '.spec.topology.variables[].value.controlPlane.nutanix.machineDetails.image.name')
+                        echo "      Nutanix Control Plane Image: $NKPCPIMAGE"
+                        #get the worker image version
+                        #need to create loop if more than 1 machineDeployment
+                        WKRIMAGE=$(echo "${WKCLUSTERJSON}" |jq -r '.spec.topology.workers.machineDeployments[].variables.overrides[].value.nutanix.machineDetails.image.name')
+                        echo "      Nutanix Worker Image: $WKRIMAGE"
+                        ;;
+                    *)
+                        echo "      other provider: $WORKLOADCLUSTERPROVIDER"
+                        exit 1
+                        ;;
+                esac
+                echo
+            else
+                echo "$KUBERNETESVERSION is higher than $CLIK8SVERSION"
+                echo "upgrade NKP CLI is recommended."
+            fi
         fi
-    fi
-done
+    done
+fi
 
 # print summary
 echo
