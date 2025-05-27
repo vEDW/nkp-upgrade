@@ -35,20 +35,6 @@ nkp_to_k8s_version=(
 )
 #------------------------------------------------------------------------------
 
-echo
-echo "Checking nkp cli version..."
-echo 
-#check which version of nkp is installed
-if ! command -v nkp &> /dev/null; then
-    echo "nkp command not found. Please install nkp first."
-    exit 1
-fi
-# Get the installed version of nkp
-NKPVER=$(nkp version |grep nkp |awk '{print $2}')
-echo "NKP cli version: $NKPVER"
-CLIK8SVERSION=${nkp_to_k8s_version[$NKPVER]}
-echo "  corresponding k8s version is : ${CLIK8SVERSION}"
-
 #Select management cluster kubectl context
 if ! command -v kubectl &> /dev/null; then
     echo "kubectl command not found. Please install kubectl first."
@@ -66,6 +52,20 @@ select CONTEXT in $CONTEXTS; do
 done
 
 kubectl config use-context $CLUSTERCTX
+
+echo
+echo "Checking nkp cli version..."
+echo 
+#check which version of nkp is installed
+if ! command -v nkp &> /dev/null; then
+    echo "nkp command not found. Please install nkp first."
+    exit 1
+fi
+# Get the installed version of nkp
+NKPVER=$(nkp version |grep nkp |awk '{print $2}')
+echo "NKP cli version: $NKPVER"
+CLIK8SVERSION=${nkp_to_k8s_version[$NKPVER]}
+echo "  corresponding k8s version is : ${CLIK8SVERSION}"
 
 #check if this is a NKP Management cluster
 KOMANDERCRD=$(kubectl  api-resources |grep cluster.x-k8s.io)
@@ -186,7 +186,8 @@ WKCLUSTERUPGRADEREQUIRED=0
 WORKLOADCLUSTERS=$(kubectl get cluster -A --no-headers |grep -v default)
 #check if workload clusters are found
 if [[ -z "$WORKLOADCLUSTERS" ]]; then
-    echo "No workload clusters found. Please check if the workload clusters are created."
+    echo
+    echo "No workload clusters found."
 else
     echo
     echo "Workload Clusters:"
