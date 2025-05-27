@@ -29,10 +29,21 @@ get_nkp_nx_images() {
     export PCADMIN=$(echo "$PCSECRET" |jq -r '.[].data.prismCentral.username')
     export PCPASSWD=$(echo "$PCSECRET" |jq -r '.[].data.prismCentral.password')
     source ./functions/fct_nutanix-pc_rest_api_v4_curl.sh
-    get_images_filter "contains(name,'$SHORTCLIK8SVERSION')" |jq -r '.data[].name' |while read -r IMAGE; do
-    echo "      Available Nutanix Image: $IMAGE"
+    IMAGES=$(get_images_filter "contains(name,'$SHORTCLIK8SVERSION')" |jq -r '.data[].name')
+    if [[ -z "$IMAGES" ]]; then
+        echo 
+        echo "  No Nutanix images found for k8s version $SHORTCLIK8SVERSION"
+        return
+    else
+        echo "  Available Nutanix Images for k8s version $SHORTCLIK8SVERSION:"
+    fi  
+    # Loop through the images and print them
+    echo "  Nutanix Images for k8s version $SHORTCLIK8SVERSION:"
+    for IMAGE in $IMAGES; do
+            echo "      - $IMAGE"
     done
 }
+
 #------------------------------------------------------------------------------
 #NKP Version array
 declare -A nkp_to_k8s_version
@@ -240,6 +251,7 @@ else
                         #need to create loop if more than 1 machineDeployment
                         WKRIMAGE=$(echo "${WKCLUSTERJSON}" |jq -r '.spec.topology.workers.machineDeployments[].variables.overrides[].value.nutanix.machineDetails.image.name')
                         echo "      Nutanix Worker Image: $WKRIMAGE"
+                        echo
                         get_nkp_nx_images
                         ;;
                     *)
