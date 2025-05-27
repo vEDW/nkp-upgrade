@@ -241,7 +241,6 @@ else
                         WKRIMAGE=$(echo "${WKCLUSTERJSON}" |jq -r '.spec.topology.workers.machineDeployments[].variables.overrides[].value.nutanix.machineDetails.image.name')
                         echo "      Nutanix Worker Image: $WKRIMAGE"
                         get_nkp_nx_images
-                        done
                         ;;
                     *)
                         echo "      other provider: $WORKLOADCLUSTERPROVIDER"
