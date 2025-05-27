@@ -20,6 +20,19 @@
 version_gt() { 
   test "$(echo -e "$1\n$2" | sort -V | head -n1)" != "$1"
 }
+
+get_nkp_nx_images() {
+    # Function to get the list of available Nutanix NX images
+    #get available images from PC
+    export PCIPADDRESS=$(echo "$WKCLUSTERJSON" |jq -r '.spec.topology.variables[].value.nutanix.prismCentralEndpoint.url' |sed 's\https://\\g' |sed 's\:9440\\g' )
+    PCSECRET=$(echo "$WKCLUSTERJSON" |jq -r '.spec.topology.variables[].value.nutanix.prismCentralEndpoint.credentials.secretRef.name' |xargs -I {} kubectl get secret {} -n $CLUSTERNAMESPACE -o json |jq -r '.data.credentials'|base64 -d)
+    export PCADMIN=$(echo "$PCSECRET" |jq -r '.[].data.prismCentral.username')
+    export PCPASSWD=$(echo "$PCSECRET" |jq -r '.[].data.prismCentral.password')
+    source ./functions/fct_nutanix-pc_rest_api_v4_curl.sh
+    get_images_filter "contains(name,'$SHORTCLIK8SVERSION')" |jq -r '.data[].name' |while read -r IMAGE; do
+    echo "      Available Nutanix Image: $IMAGE"
+    done
+}
 #------------------------------------------------------------------------------
 #NKP Version array
 declare -A nkp_to_k8s_version
@@ -65,6 +78,8 @@ fi
 NKPVER=$(nkp version |grep nkp |awk '{print $2}')
 echo "NKP cli version: $NKPVER"
 CLIK8SVERSION=${nkp_to_k8s_version[$NKPVER]}
+SHORTCLIK8SVERSION=$(echo $CLIK8SVERSION |sed 's/v//')
+
 echo "  corresponding k8s version is : ${CLIK8SVERSION}"
 
 #check if this is a NKP Management cluster
@@ -213,7 +228,7 @@ else
                 WKCLUSTERUPGRADEREQUIRED=$((WKCLUSTERUPGRADEREQUIRED + 1))
                 #Get the provider for each workload cluster
                 WKCLUSTERJSON=$(kubectl get cluster $WKCLUSTER -n $CLUSTERNAMESPACE -o json)
-                WORKLOADCLUSTERPROVIDER=$(echo "${WKCLUSTERJSON}" | jq -r '.metadata.labels."cluster.x-k8s.io/provider"')
+                WORKLOADCLUSTERPROVIDER=$(echo "${WKCLUSTERJSON}"  |jq -r '.metadata.labels."konvoy.d2iq.io/provider"')
                 # need to expand for non nutanix providers
                 case $WORKLOADCLUSTERPROVIDER in
                     "nutanix")
@@ -225,6 +240,8 @@ else
                         #need to create loop if more than 1 machineDeployment
                         WKRIMAGE=$(echo "${WKCLUSTERJSON}" |jq -r '.spec.topology.workers.machineDeployments[].variables.overrides[].value.nutanix.machineDetails.image.name')
                         echo "      Nutanix Worker Image: $WKRIMAGE"
+                        get_nkp_nx_images
+                        done
                         ;;
                     *)
                         echo "      other provider: $WORKLOADCLUSTERPROVIDER"
@@ -252,40 +269,32 @@ echo "  NKP Edition: $LICENSECRD"
 echo "  NKP Management Cluster Provider: $NKPPROVIDER"
 echo "  NKP Management Cluster Kubernetes Version: $MGMTKUBERNETESVERSION"
 echo "  ========================================================="
-UPGRADECOUNT=0
+UPGRADEREQ="false"
 
-#if kommander not found, skip kommander upgrade
 if [[ "$KOMMANDERVERSION" == "Kommander not found" ]]; then
     echo "  Kommander is not installed. Skipping Kommander upgrade."
 else
     if [[ "$KOMMANDERUPGRADEREQUIRED" == "true" ]]; then
         echo "  Upgrade Kommander is required."
-        UPGRADECOUNT=$((UPGRADECOUNT + 1))
-    #else
-    #    echo "  No Kommander upgrade required."
+        UPGRADEREQ="true"
     fi
 fi
 if [[ "$MGMTCLUSTERUPGRADEREQUIRED" == "true" ]]; then
     echo "  Upgrade Management Cluster is required."
-        UPGRADECOUNT=$((UPGRADECOUNT + 1))
-#else
-#    echo "  No Management Cluster upgrade required."
+        UPGRADEREQ="true"
 fi
 if [[ "$KOMMANDERVERSION" != "Kommander not found" ]]; then
     if [[ "$WKSPACEUPGRADEREQUIRED" -gt 0 ]]; then
         echo "  $WKSPACEUPGRADEREQUIRED Workspaces Upgrade required."
-        UPGRADECOUNT=$((UPGRADECOUNT + 1))
-    #else
-    #    echo "  No Workspace upgrade required."
+        UPGRADEREQ="true"
     fi
 fi
 if [[ "$WKCLUSTERUPGRADEREQUIRED" -gt 0 ]]; then
     echo "  $WKCLUSTERUPGRADEREQUIRED Workload Clusters Upgrade required."
-    UPGRADECOUNT=$((UPGRADECOUNT + 1))
-#else
-#    echo "  No Workload Cluster upgrade required."
+    UPGRADEREQ="true"
 fi
-if [[ "$UPGRADECOUNT" -eq 0 ]]; then
+
+if [[ "$UPGRADEREQ" == "true" ]]; then
     echo "  No upgrades required."
 fi
 echo "  ========================================================="
