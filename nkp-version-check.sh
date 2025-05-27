@@ -251,32 +251,41 @@ echo "  NKP Edition: $LICENSECRD"
 echo "  NKP Management Cluster Provider: $NKPPROVIDER"
 echo "  NKP Management Cluster Kubernetes Version: $MGMTKUBERNETESVERSION"
 echo "  ========================================================="
+UPGRADECOUNT=0
+
 #if kommander not found, skip kommander upgrade
 if [[ "$KOMMANDERVERSION" == "Kommander not found" ]]; then
     echo "  Kommander is not installed. Skipping Kommander upgrade."
 else
     if [[ "$KOMMANDERUPGRADEREQUIRED" == "true" ]]; then
         echo "  Upgrade Kommander is required."
+        UPGRADECOUNT=$((UPGRADECOUNT + 1))
     #else
     #    echo "  No Kommander upgrade required."
     fi
 fi
 if [[ "$MGMTCLUSTERUPGRADEREQUIRED" == "true" ]]; then
     echo "  Upgrade Management Cluster is required."
+        UPGRADECOUNT=$((UPGRADECOUNT + 1))
 #else
 #    echo "  No Management Cluster upgrade required."
 fi
 if [[ "$KOMMANDERVERSION" == "Kommander not found" ]]; then
     if [[ "$WKSPACEUPGRADEREQUIRED" -gt 0 ]]; then
         echo "  $WKSPACEUPGRADEREQUIRED Workspaces Upgrade required."
+        UPGRADECOUNT=$((UPGRADECOUNT + 1))
     #else
     #    echo "  No Workspace upgrade required."
     fi
 fi
 if [[ "$WKCLUSTERUPGRADEREQUIRED" -gt 0 ]]; then
     echo "  $WKCLUSTERUPGRADEREQUIRED Workload Clusters Upgrade required."
+    UPGRADECOUNT=$((UPGRADECOUNT + 1))
 #else
 #    echo "  No Workload Cluster upgrade required."
+fi
+if [[ "$UPGRADECOUNT" -eq 0 ]]; then
+    echo "  No upgrades required."
 fi
 echo "  ========================================================="
 echo
