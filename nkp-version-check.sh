@@ -81,6 +81,7 @@ echo "NKP Management Cluster name: $NKPMGMTCLUSTER"
 NKPPROVIDER=$(kubectl get cluster $NKPMGMTCLUSTER -n default -o json |jq -r '.metadata.labels."cluster.x-k8s.io/provider"')
 echo "NKP Management Cluster Provider: $NKPPROVIDER"
 
+KOMMANDERUPGRADEREQUIRED="false"
 #Get the version of kommander
 KOMMANDERVERSION=$(kubectl get hr -n kommander kommander-appmanagement -o jsonpath='{.spec.chart.spec.version}')
 echo
@@ -96,11 +97,13 @@ else
     if version_gt "$NKPVER" "$KOMMANDERVERSION"; then
         echo "$NKPVER is higher than $KOMMANDERVERSION"
         echo "upgrade kommander is recommended."
+        KOMMANDERUPGRADEREQUIRED="true"
     else
         echo "$KOMMANDERVERSION is higher than $v2"
         echo "upgrade NKP CLI is recommended."
     fi
 fi
+MGMTCLUSTERUPGRADEREQUIRED="false"
 # Get the version of the kubernetes cluster
 KUBERNETESVERSION=$(kubectl version | grep Server | awk '{print $3}')
 echo
@@ -115,6 +118,7 @@ else
     if version_gt "$CLIK8SVERSION" "$KUBERNETESVERSION"; then
         echo "  $CLIK8SVERSION is higher than $KUBERNETESVERSION"
         echo "  upgrade mgmt cluster is recommended."
+        MGMTCLUSTERUPGRADEREQUIRED="true"
     else
         echo "  $KUBERNETESVERSION is higher than $CLIK8SVERSION"
         echo "  upgrade NKP CLI is recommended."
@@ -130,6 +134,7 @@ echo
 echo "NKP Edition: $LICENSECRD"
 echo
 
+WKSPACEUPGRADEREQUIRED=0
 # Get the list of workspaces
 WORKSPACES=$(kubectl get workspaces -o json |jq -r '["workspace","namespace","version" ], (.items[]|[.metadata.name,.spec.namespaceName,.status.version])|@tsv' |column -t)
 echo "Workspaces:"
@@ -143,13 +148,15 @@ for WORKSPACE in $(echo "$WORKSPACES" | awk 'NR>1 {print $1}'); do
     echo "  Workspace: $WORKSPACE, Version: $WORKSPACEVERSION"
     # Check if the workspace version is compatible with the nkp version
     if [[ "$KOMMANDERFLUXVERSION" == "$WORKSPACEVERSION" ]]; then
-        echo "  NKP Platform app version matches Workspace version."
-        echo "  Skip workspace upgrade"
+        echo "      NKP Platform app version matches Workspace version."
+        echo "      Skip workspace upgrade"
     else
         #check if cli version is higher than workspace version 
         if version_gt "$KOMMANDERFLUXVERSION" "$WORKSPACEVERSION"; then
             echo "      $KOMMANDERFLUXVERSION is higher than $WORKSPACEVERSION"
             echo "      upgrade workspace is recommended."
+            #increase the upgrade required counter
+            WKSPACEUPGRADEREQUIRED=$((WKSPACEUPGRADEREQUIRED + 1))
         else
             echo "      $WORKSPACEVERSION is higher than $KOMMANDERFLUXVERSION"
             echo "      upgrade NKP CLI is recommended."
@@ -166,6 +173,7 @@ echo "Workload Clusters:"
 echo
 echo "$WORKLOADCLUSTERS"
 echo
+WKCLUSTERUPGRADEREQUIRED=0
 
 # Get the version of each workload cluster
 for WKCLUSTER in $(echo "$WORKLOADCLUSTERS" | awk 'NR>1 {print $2}'); do
@@ -183,7 +191,8 @@ for WKCLUSTER in $(echo "$WORKLOADCLUSTERS" | awk 'NR>1 {print $2}'); do
         if version_gt "$CLIK8SVERSION" "$KUBERNETESVERSION"; then
             echo "      $CLIK8SVERSION is higher than $KUBERNETESVERSION"
             echo "      upgrade cluster is recommended."
-
+            #increase the upgrade required counter
+            WKCLUSTERUPGRADEREQUIRED=$((WKCLUSTERUPGRADEREQUIRED + 1))
             #Get the provider for each workload cluster
             WKCLUSTERJSON=$(kubectl get cluster $WKCLUSTER -n $CLUSTERNAMESPACE -o json)
             WORKLOADCLUSTERPROVIDER=$(echo "${WKCLUSTERJSON}" | jq -r '.metadata.labels."cluster.x-k8s.io/provider"')
@@ -211,4 +220,35 @@ for WKCLUSTER in $(echo "$WORKLOADCLUSTERS" | awk 'NR>1 {print $2}'); do
         fi
     fi
 done
+
+# print summary
+echo
+echo "Summary:"
+echo "  NKP CLI Version: $NKPVER"
+echo "  NKP Management Cluster: $NKPMGMTCLUSTER"
+echo "  NKP Management Cluster Provider: $NKPPROVIDER"
+echo "  NKP Management Cluster Kubernetes Version: $KUBERNETESVERSION"
+echo "  ========================================================="
+if [[ "$KOMMANDERUPGRADEREQUIRED" == "true" ]]; then
+    echo "  Upgrade Kommander is required."
+else
+    echo "  No Kommander upgrade required."
+fi
+if [[ "$MGMTCLUSTERUPGRADEREQUIRED" == "true" ]]; then
+    echo "  Upgrade Management Cluster is required."
+else
+    echo "  No Management Cluster upgrade required."
+fi
+if [[ "$WKSPACEUPGRADEREQUIRED" -gt 0 ]]; then
+    echo "  Upgrade $WKSPACEUPGRADEREQUIRED Workspaces is required."
+else
+    echo "  No Workspace upgrade required."
+fi
+if [[ "$WKCLUSTERUPGRADEREQUIRED" -gt 0 ]]; then
+    echo "  Upgrade $WKCLUSTERUPGRADEREQUIRED Workload Clusters is required."
+else
+    echo "  No Workload Cluster upgrade required."
+fi
+echo "  ========================================================="
+echo
 
