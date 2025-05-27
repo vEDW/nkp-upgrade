@@ -84,23 +84,29 @@ echo "NKP Management Cluster Provider: $NKPPROVIDER"
 KOMMANDERUPGRADEREQUIRED="false"
 #Get the version of kommander
 KOMMANDERVERSION=$(kubectl get hr -n kommander kommander-appmanagement -o jsonpath='{.spec.chart.spec.version}')
-echo
-echo "Kommander Version: $KOMMANDERVERSION"
-#compare cli version with management cluster version
-if [[ "$NKPVER" == "$KOMMANDERVERSION" ]]; then
-    echo "  NKP CLI version matches Kommander version."
-    echo "  Skip kommander upgrade"
-    KOMMANDERFLUXVERSION=$(kubectl get appdeployments -n kommander kommander-flux |awk 'NR>1 {print $2}' |rev |cut -d"-" -f1|rev)
-    echo "  Kommander Flux Version: $KOMMANDERFLUXVERSION"
+#check if field empty
+if [[ -z "$KOMMANDERVERSION" ]]; then
+    echo "Kommander version not found. Please check if Kommander is installed."
+    KOMMANDERVERSION="Kommander not found"
 else
-    #check if cli version is higher than management cluster version 
-    if version_gt "$NKPVER" "$KOMMANDERVERSION"; then
-        echo "$NKPVER is higher than $KOMMANDERVERSION"
-        echo "upgrade kommander is recommended."
-        KOMMANDERUPGRADEREQUIRED="true"
+    echo
+    echo "Kommander Version: $KOMMANDERVERSION"
+    #compare cli version with management cluster version
+    if [[ "$NKPVER" == "$KOMMANDERVERSION" ]]; then
+        echo "  NKP CLI version matches Kommander version."
+        echo "  Skip kommander upgrade"
+        KOMMANDERFLUXVERSION=$(kubectl get appdeployments -n kommander kommander-flux |awk 'NR>1 {print $2}' |rev |cut -d"-" -f1|rev)
+        echo "  Kommander Flux Version: $KOMMANDERFLUXVERSION"
     else
-        echo "$KOMMANDERVERSION is higher than $v2"
-        echo "upgrade NKP CLI is recommended."
+        #check if cli version is higher than management cluster version 
+        if version_gt "$NKPVER" "$KOMMANDERVERSION"; then
+            echo "$NKPVER is higher than $KOMMANDERVERSION"
+            echo "upgrade kommander is recommended."
+            KOMMANDERUPGRADEREQUIRED="true"
+        else
+            echo "$KOMMANDERVERSION is higher than $v2"
+            echo "upgrade NKP CLI is recommended."
+        fi
     fi
 fi
 MGMTCLUSTERUPGRADEREQUIRED="false"
@@ -128,42 +134,51 @@ fi
 #------------------------------------------------------------------------------
 # Check workspace application versions
 
-#check NKP edition
-LICENSECRD=$(kubectl get licenses -n kommander -o json |jq -r '.items[].status.dkpLevel')
-echo
-echo "NKP Edition: $LICENSECRD"
-echo
-
-WKSPACEUPGRADEREQUIRED=0
-# Get the list of workspaces
-WORKSPACES=$(kubectl get workspaces -o json |jq -r '["workspace","namespace","version" ], (.items[]|[.metadata.name,.spec.namespaceName,.status.version])|@tsv' |column -t)
-echo "Workspaces:"
-echo
-echo "$WORKSPACES"
-echo
-# Get the version of each workspace
-for WORKSPACE in $(echo "$WORKSPACES" | awk 'NR>1 {print $1}'); do
-    WORKSPACENS=$(echo "$WORKSPACES" |grep $WORKSPACE | awk '{print $2}')
-    WORKSPACEVERSION=$(kubectl get appdeployments -n $WORKSPACENS kommander-flux |awk 'NR>1 {print $2}' |rev |cut -d"-" -f1|rev)
-    echo "  Workspace: $WORKSPACE, Version: $WORKSPACEVERSION"
-    # Check if the workspace version is compatible with the nkp version
-    if [[ "$KOMMANDERFLUXVERSION" == "$WORKSPACEVERSION" ]]; then
-        echo "      NKP Platform app version matches Workspace version."
-        echo "      Skip workspace upgrade"
+#skip if kommander is not installed
+if [[ "$KOMMANDERVERSION" == "Kommander not found" ]]; then
+    echo "Kommander is not installed. Skipping workspace version check."
+else
+    #check NKP edition
+    LICENSECRD=$(kubectl get licenses -n kommander -o json |jq -r '.items[].status.dkpLevel')
+    #check if license is empty
+    if [[ -z "$LICENSECRD" ]]; then
+        echo "No license found. Please check if the license is installed."
+        LICENSECRD="No License found"
     else
-        #check if cli version is higher than workspace version 
-        if version_gt "$KOMMANDERFLUXVERSION" "$WORKSPACEVERSION"; then
-            echo "      $KOMMANDERFLUXVERSION is higher than $WORKSPACEVERSION"
-            echo "      upgrade workspace is recommended."
-            #increase the upgrade required counter
-            WKSPACEUPGRADEREQUIRED=$((WKSPACEUPGRADEREQUIRED + 1))
-        else
-            echo "      $WORKSPACEVERSION is higher than $KOMMANDERFLUXVERSION"
-            echo "      upgrade NKP CLI is recommended."
-        fi
+        echo
+        echo "NKP Edition: $LICENSECRD"
+        echo
     fi
-done
-
+    WKSPACEUPGRADEREQUIRED=0
+    # Get the list of workspaces
+    WORKSPACES=$(kubectl get workspaces -o json |jq -r '["workspace","namespace","version" ], (.items[]|[.metadata.name,.spec.namespaceName,.status.version])|@tsv' |column -t)
+    echo "Workspaces:"
+    echo
+    echo "$WORKSPACES"
+    echo
+    # Get the version of each workspace
+    for WORKSPACE in $(echo "$WORKSPACES" | awk 'NR>1 {print $1}'); do
+        WORKSPACENS=$(echo "$WORKSPACES" |grep $WORKSPACE | awk '{print $2}')
+        WORKSPACEVERSION=$(kubectl get appdeployments -n $WORKSPACENS kommander-flux |awk 'NR>1 {print $2}' |rev |cut -d"-" -f1|rev)
+        echo "  Workspace: $WORKSPACE, Version: $WORKSPACEVERSION"
+        # Check if the workspace version is compatible with the nkp version
+        if [[ "$KOMMANDERFLUXVERSION" == "$WORKSPACEVERSION" ]]; then
+            echo "      NKP Platform app version matches Workspace version."
+            echo "      Skip workspace upgrade"
+        else
+            #check if cli version is higher than workspace version 
+            if version_gt "$KOMMANDERFLUXVERSION" "$WORKSPACEVERSION"; then
+                echo "      $KOMMANDERFLUXVERSION is higher than $WORKSPACEVERSION"
+                echo "      upgrade workspace is recommended."
+                #increase the upgrade required counter
+                WKSPACEUPGRADEREQUIRED=$((WKSPACEUPGRADEREQUIRED + 1))
+            else
+                echo "      $WORKSPACEVERSION is higher than $KOMMANDERFLUXVERSION"
+                echo "      upgrade NKP CLI is recommended."
+            fi
+        fi
+    done
+fi
 
 #------------------------------------------------------------------------------
 # Check workload clusters
@@ -232,20 +247,27 @@ echo "  NKP Edition: $LICENSECRD"
 echo "  NKP Management Cluster Provider: $NKPPROVIDER"
 echo "  NKP Management Cluster Kubernetes Version: $MGMTKUBERNETESVERSION"
 echo "  ========================================================="
-if [[ "$KOMMANDERUPGRADEREQUIRED" == "true" ]]; then
-    echo "  Upgrade Kommander is required."
-#else
-#    echo "  No Kommander upgrade required."
+#if kommander not found, skip kommander upgrade
+if [[ "$KOMMANDERVERSION" == "Kommander not found" ]]; then
+    echo "  Kommander is not installed. Skipping Kommander upgrade."
+else
+    if [[ "$KOMMANDERUPGRADEREQUIRED" == "true" ]]; then
+        echo "  Upgrade Kommander is required."
+    #else
+    #    echo "  No Kommander upgrade required."
+    fi
 fi
 if [[ "$MGMTCLUSTERUPGRADEREQUIRED" == "true" ]]; then
     echo "  Upgrade Management Cluster is required."
 #else
 #    echo "  No Management Cluster upgrade required."
 fi
-if [[ "$WKSPACEUPGRADEREQUIRED" -gt 0 ]]; then
-    echo "  $WKSPACEUPGRADEREQUIRED Workspaces Upgrade required."
-#else
-#    echo "  No Workspace upgrade required."
+if [[ "$KOMMANDERVERSION" == "Kommander not found" ]]; then
+    if [[ "$WKSPACEUPGRADEREQUIRED" -gt 0 ]]; then
+        echo "  $WKSPACEUPGRADEREQUIRED Workspaces Upgrade required."
+    #else
+    #    echo "  No Workspace upgrade required."
+    fi
 fi
 if [[ "$WKCLUSTERUPGRADEREQUIRED" -gt 0 ]]; then
     echo "  $WKCLUSTERUPGRADEREQUIRED Workload Clusters Upgrade required."
