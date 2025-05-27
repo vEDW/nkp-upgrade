@@ -226,6 +226,7 @@ echo
 echo "Summary:"
 echo "  NKP CLI Version: $NKPVER"
 echo "  NKP Management Cluster: $NKPMGMTCLUSTER"
+echo "  NKP Edition: $LICENSECRD"
 echo "  NKP Management Cluster Provider: $NKPPROVIDER"
 echo "  NKP Management Cluster Kubernetes Version: $KUBERNETESVERSION"
 echo "  ========================================================="
