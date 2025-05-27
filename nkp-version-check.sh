@@ -78,7 +78,7 @@ NKPMGMTCLUSTER=$(kubectl get cluster -n default -o jsonpath='{.items[0].metadata
 echo
 echo "NKP Management Cluster name: $NKPMGMTCLUSTER"
 #get provider
-NKPPROVIDER=$(kubectl get cluster $NKPMGMTCLUSTER -n default -o json |jq -r '.metadata.labels."cluster.x-k8s.io/provider"')
+NKPPROVIDER=$(kubectl get cluster $NKPMGMTCLUSTER -n default -o json |jq -r '.metadata.labels."konvoy.d2iq.io/provider"')
 echo "NKP Management Cluster Provider: $NKPPROVIDER"
 
 KOMMANDERUPGRADEREQUIRED="false"
