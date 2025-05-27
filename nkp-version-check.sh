@@ -68,7 +68,7 @@ done
 kubectl config use-context $CLUSTERCTX
 
 #check if this is a NKP Management cluster
-KOMANDERCRD=$(kubectl  api-resources |grep kommander)
+KOMANDERCRD=$(kubectl  api-resources |grep cluster.x-k8s.io)
 if [[ -z "$KOMANDERCRD" ]]; then
     echo "This is not a NKP Management Cluster. Please select a valid management cluster."
     exit 1
@@ -224,6 +224,8 @@ done
 # print summary
 echo
 echo "Summary:"
+echo
+echo "  ========================================================="
 echo "  NKP CLI Version: $NKPVER"
 echo "  NKP Management Cluster: $NKPMGMTCLUSTER"
 echo "  NKP Edition: $LICENSECRD"
