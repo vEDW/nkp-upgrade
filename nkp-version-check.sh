@@ -133,7 +133,7 @@ fi
 
 #------------------------------------------------------------------------------
 # Check workspace application versions
-
+WKSPACEUPGRADEREQUIRED=0
 #skip if kommander is not installed
 if [[ "$KOMMANDERVERSION" == "Kommander not found" ]]; then
     echo "Kommander is not installed. Skipping workspace version check."
@@ -149,7 +149,6 @@ else
         echo "NKP Edition: $LICENSECRD"
         echo
     fi
-    WKSPACEUPGRADEREQUIRED=0
     # Get the list of workspaces
     WORKSPACES=$(kubectl get workspaces -o json |jq -r '["workspace","namespace","version" ], (.items[]|[.metadata.name,.spec.namespaceName,.status.version])|@tsv' |column -t)
     echo "Workspaces:"
@@ -271,7 +270,7 @@ if [[ "$MGMTCLUSTERUPGRADEREQUIRED" == "true" ]]; then
 #else
 #    echo "  No Management Cluster upgrade required."
 fi
-if [[ "$KOMMANDERVERSION" == "Kommander not found" ]]; then
+if [[ "$KOMMANDERVERSION" != "Kommander not found" ]]; then
     if [[ "$WKSPACEUPGRADEREQUIRED" -gt 0 ]]; then
         echo "  $WKSPACEUPGRADEREQUIRED Workspaces Upgrade required."
         UPGRADECOUNT=$((UPGRADECOUNT + 1))
