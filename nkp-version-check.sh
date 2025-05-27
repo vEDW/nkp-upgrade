@@ -153,8 +153,8 @@ else
     # Get the list of workspaces
     WORKSPACES=$(kubectl get workspaces -o json |jq -r '["workspace","namespace","version" ], (.items[]|[.metadata.name,.spec.namespaceName,.status.version])|@tsv' |column -t)
     echo "Workspaces:"
-    echo
-    echo "$WORKSPACES"
+#    echo
+#    echo "$WORKSPACES"
     echo
     # Get the version of each workspace
     for WORKSPACE in $(echo "$WORKSPACES" | awk 'NR>1 {print $1}'); do
