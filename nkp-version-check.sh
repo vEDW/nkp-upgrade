@@ -231,23 +231,23 @@ echo "  NKP Management Cluster Kubernetes Version: $KUBERNETESVERSION"
 echo "  ========================================================="
 if [[ "$KOMMANDERUPGRADEREQUIRED" == "true" ]]; then
     echo "  Upgrade Kommander is required."
-else
-    echo "  No Kommander upgrade required."
+#else
+#    echo "  No Kommander upgrade required."
 fi
 if [[ "$MGMTCLUSTERUPGRADEREQUIRED" == "true" ]]; then
     echo "  Upgrade Management Cluster is required."
-else
-    echo "  No Management Cluster upgrade required."
+#else
+#    echo "  No Management Cluster upgrade required."
 fi
 if [[ "$WKSPACEUPGRADEREQUIRED" -gt 0 ]]; then
-    echo "  Upgrade $WKSPACEUPGRADEREQUIRED Workspaces is required."
-else
-    echo "  No Workspace upgrade required."
+    echo "  $WKSPACEUPGRADEREQUIRED Workspaces Upgrade required."
+#else
+#    echo "  No Workspace upgrade required."
 fi
 if [[ "$WKCLUSTERUPGRADEREQUIRED" -gt 0 ]]; then
-    echo "  Upgrade $WKCLUSTERUPGRADEREQUIRED Workload Clusters is required."
-else
-    echo "  No Workload Cluster upgrade required."
+    echo "  $WKCLUSTERUPGRADEREQUIRED Workload Clusters Upgrade required."
+#else
+#    echo "  No Workload Cluster upgrade required."
 fi
 echo "  ========================================================="
 echo
