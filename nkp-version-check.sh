@@ -34,13 +34,11 @@ get_nkp_nx_images() {
         echo 
         echo "  No Nutanix images found for k8s version $SHORTCLIK8SVERSION"
         return
-    else
-        echo "  Available Nutanix Images for k8s version $SHORTCLIK8SVERSION:"
     fi  
     # Loop through the images and print them
-    echo "  Nutanix Images for k8s version $SHORTCLIK8SVERSION:"
+    echo "      Nutanix Images for k8s version $SHORTCLIK8SVERSION:"
     for IMAGE in $IMAGES; do
-            echo "      - $IMAGE"
+            echo "          - $IMAGE"
     done
 }
 
