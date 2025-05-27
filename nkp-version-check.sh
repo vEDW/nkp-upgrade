@@ -105,22 +105,22 @@ else
 fi
 MGMTCLUSTERUPGRADEREQUIRED="false"
 # Get the version of the kubernetes cluster
-KUBERNETESVERSION=$(kubectl version | grep Server | awk '{print $3}')
+MGMTKUBERNETESVERSION=$(kubectl version | grep Server | awk '{print $3}')
 echo
-echo "NKP Management Cluster Kubernetes Version: $KUBERNETESVERSION"
+echo "NKP Management Cluster Kubernetes Version: $MGMTKUBERNETESVERSION"
 # Check if the kubernetes version is compatible with the nkp version
 
-if [[ "$CLIK8SVERSION"  == "$KUBERNETESVERSION" ]]; then
+if [[ "$CLIK8SVERSION"  == "$MGMTKUBERNETESVERSION" ]]; then
     echo "  NKP CLI k8s version matches Mgmt cluster k8s version."
     echo "  Skip Mgmt cluster kubernetes upgrade"
 else
     #check if cli version is higher than management cluster version 
-    if version_gt "$CLIK8SVERSION" "$KUBERNETESVERSION"; then
-        echo "  $CLIK8SVERSION is higher than $KUBERNETESVERSION"
+    if version_gt "$CLIK8SVERSION" "$MGMTKUBERNETESVERSION"; then
+        echo "  $CLIK8SVERSION is higher than $MGMTKUBERNETESVERSION"
         echo "  upgrade mgmt cluster is recommended."
         MGMTCLUSTERUPGRADEREQUIRED="true"
     else
-        echo "  $KUBERNETESVERSION is higher than $CLIK8SVERSION"
+        echo "  $MGMTKUBERNETESVERSION is higher than $CLIK8SVERSION"
         echo "  upgrade NKP CLI is recommended."
     fi
 fi
@@ -228,7 +228,7 @@ echo "  NKP CLI Version: $NKPVER"
 echo "  NKP Management Cluster: $NKPMGMTCLUSTER"
 echo "  NKP Edition: $LICENSECRD"
 echo "  NKP Management Cluster Provider: $NKPPROVIDER"
-echo "  NKP Management Cluster Kubernetes Version: $KUBERNETESVERSION"
+echo "  NKP Management Cluster Kubernetes Version: $MGMTKUBERNETESVERSION"
 echo "  ========================================================="
 if [[ "$KOMMANDERUPGRADEREQUIRED" == "true" ]]; then
     echo "  Upgrade Kommander is required."
