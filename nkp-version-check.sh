@@ -222,11 +222,10 @@ else
     # Get the version of each workload cluster
     for WKCLUSTER in "$WORKLOADCLUSTERS"; do
         #CLUSTERNAMESPACE=$(echo "$WORKLOADCLUSTERS" |grep $WKCLUSTER | awk '{print $1}')
-        CLUSTERNAMESPACE=$(echo "${WORKLOADCLUSTERSJSON}" | jq --arg WKCLUSTER "$WKCLUSTER" -r '.items[].metadata |select (.name ==  $WKCLUSTER ) |.namespace')
-        KUBERNETESVERSION=$(kubectl get clusters $WKCLUSTER -n $CLUSTERNAMESPACE -o json | jq -r '.spec.topology.version')
-        echo "  Workload Cluster: $WKCLUSTER, namespace: $CLUSTERNAMESPACE, Version: $WORKLOADCLUSTERVERSION"
-        echo "      Kubernetes Version: $KUBERNETESVERSION"
-        # Check if the kubernetes version is compatible with the nkp version
+        CLUSTERNAMESPACE=$(echo "${WORKLOADCLUSTERSJSON}" | jq --arg WKCLUSTER "$WKCLUSTER" -r '.items[].metadata |select (.name ==  $WKCLUSTER) |.namespace')
+        echo "  Workload Cluster: $WKCLUSTER, namespace: $CLUSTERNAMESPACE"
+        WORKLOADCLUSTERVERSION=$(kubectl get clusters $WKCLUSTER -n $CLUSTERNAMESPACE -o json | jq -r '.spec.topology.version')
+        echo "  Workload Cluster: $WKCLUSTER, namespace: $CLUSTERNAMESPACE, Kubernetes Version: $KUBERNETESVERSION"
 
         if [[ "$CLIK8SVERSION"  == "$KUBERNETESVERSION" ]]; then
             echo "  NKP CLI k8s version matches Mgmt cluster k8s version."
