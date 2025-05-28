@@ -208,7 +208,7 @@ fi
 # Check workload clusters
 WKCLUSTERUPGRADEREQUIRED=0
 WORKLOADCLUSTERSJSON=$(kubectl get clusters -A -o json)
-WORKLOADCLUSTERS=$(echo "${WORKLOADCLUSTERSJSON}" | jq -r '.items[].metadata.name')
+WORKLOADCLUSTERS=$(echo "${WORKLOADCLUSTERSJSON}" | jq -r '.items[].metadata|select(.namespace != "default")|.name')
 #check if workload clusters are found
 if [[ -z "$WORKLOADCLUSTERS" ]]; then
     echo
@@ -216,8 +216,6 @@ if [[ -z "$WORKLOADCLUSTERS" ]]; then
 else
     echo
     echo "Workload Clusters:"
-    echo
-    echo "$WORKLOADCLUSTERS"
     echo
     # Get the version of each workload cluster
     for WKCLUSTER in $WORKLOADCLUSTERS; do
