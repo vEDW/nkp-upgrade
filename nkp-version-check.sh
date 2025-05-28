@@ -207,7 +207,8 @@ fi
 #------------------------------------------------------------------------------
 # Check workload clusters
 WKCLUSTERUPGRADEREQUIRED=0
-WORKLOADCLUSTERS=$(kubectl get cluster -A --no-headers) #|grep -v default)
+WORKLOADCLUSTERSJSON=$(kubectl get clusters -A -o json)
+WORKLOADCLUSTERS=$(echo "${WORKLOADCLUSTERSJSON}" | jq -r '.items[].metadata.name')
 #check if workload clusters are found
 if [[ -z "$WORKLOADCLUSTERS" ]]; then
     echo
@@ -220,8 +221,9 @@ else
     echo
     # Get the version of each workload cluster
     for WKCLUSTER in $(echo "$WORKLOADCLUSTERS" | awk '{print $2}'); do
-        CLUSTERNAMESPACE=$(echo "$WORKLOADCLUSTERS" |grep $WKCLUSTER | awk '{print $1}')
-        KUBERNETESVERSION=$(kubectl get cluster $WKCLUSTER -n $CLUSTERNAMESPACE -o json | jq -r '.spec.topology.version')
+        #CLUSTERNAMESPACE=$(echo "$WORKLOADCLUSTERS" |grep $WKCLUSTER | awk '{print $1}')
+        CLUSTERNAMESPACE=$(echo "${WORKLOADCLUSTERSJSON}" | jq --arg WKCLUSTER "$WKCLUSTER" -r '.items[].metadata |select (.name ==  $WKCLUSTER ) |.namespace'
+        KUBERNETESVERSION=$(kubectl get clusters $WKCLUSTER -n $CLUSTERNAMESPACE -o json | jq -r '.spec.topology.version')
         echo "  Workload Cluster: $WKCLUSTER, namespace: $CLUSTERNAMESPACE, Version: $WORKLOADCLUSTERVERSION"
         echo "      Kubernetes Version: $KUBERNETESVERSION"
         # Check if the kubernetes version is compatible with the nkp version
