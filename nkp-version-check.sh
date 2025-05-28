@@ -303,7 +303,7 @@ if [[ "$WKCLUSTERUPGRADEREQUIRED" -gt 0 ]]; then
     UPGRADEREQ="true"
 fi
 
-if [[ "$UPGRADEREQ" == "true" ]]; then
+if [[ "$UPGRADEREQ" != "true" ]]; then
     echo "  No upgrades required."
 fi
 echo "  ========================================================="
