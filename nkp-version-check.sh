@@ -220,7 +220,7 @@ else
     echo "$WORKLOADCLUSTERS"
     echo
     # Get the version of each workload cluster
-    for WKCLUSTER in $(echo "$WORKLOADCLUSTERS" | awk '{print $2}'); do
+    for WKCLUSTER in "$WORKLOADCLUSTERS"; do
         #CLUSTERNAMESPACE=$(echo "$WORKLOADCLUSTERS" |grep $WKCLUSTER | awk '{print $1}')
         CLUSTERNAMESPACE=$(echo "${WORKLOADCLUSTERSJSON}" | jq --arg WKCLUSTER "$WKCLUSTER" -r '.items[].metadata |select (.name ==  $WKCLUSTER ) |.namespace')
         KUBERNETESVERSION=$(kubectl get clusters $WKCLUSTER -n $CLUSTERNAMESPACE -o json | jq -r '.spec.topology.version')
