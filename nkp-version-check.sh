@@ -182,6 +182,7 @@ else
     # Get the version of each workspace
     for WORKSPACE in $(echo "$WORKSPACES" | awk 'NR>1 {print $1}'); do
         WORKSPACENS=$(echo "$WORKSPACES" |grep $WORKSPACE | awk '{print $2}')
+        WORKSPACEVERSION=""
         WORKSPACEVERSION=$(kubectl get appdeployments -n $WORKSPACENS kommander-flux |awk 'NR>1 {print $2}' |rev |cut -d"-" -f1|rev)
         echo "  Workspace: $WORKSPACE, Version: $WORKSPACEVERSION"
         # Check if the workspace version is compatible with the nkp version
