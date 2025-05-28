@@ -207,7 +207,7 @@ fi
 #------------------------------------------------------------------------------
 # Check workload clusters
 WKCLUSTERUPGRADEREQUIRED=0
-WORKLOADCLUSTERS=$(kubectl get cluster -A --no-headers |grep -v default)
+WORKLOADCLUSTERS=$(kubectl get cluster -A --no-headers) #|grep -v default)
 #check if workload clusters are found
 if [[ -z "$WORKLOADCLUSTERS" ]]; then
     echo
