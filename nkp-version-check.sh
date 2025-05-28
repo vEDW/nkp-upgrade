@@ -220,7 +220,7 @@ else
     echo "$WORKLOADCLUSTERS"
     echo
     # Get the version of each workload cluster
-    for WKCLUSTER in "$WORKLOADCLUSTERS"; do
+    for WKCLUSTER in $WORKLOADCLUSTERS; do
         #CLUSTERNAMESPACE=$(echo "$WORKLOADCLUSTERS" |grep $WKCLUSTER | awk '{print $1}')
         CLUSTERNAMESPACE=$(echo "${WORKLOADCLUSTERSJSON}" | jq --arg WKCLUSTER "$WKCLUSTER" -r '.items[].metadata |select (.name ==  $WKCLUSTER) |.namespace')
         echo "  Workload Cluster: $WKCLUSTER, namespace: $CLUSTERNAMESPACE"
