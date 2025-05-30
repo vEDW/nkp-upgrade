@@ -176,8 +176,8 @@ else
     # Get the list of workspaces
     WORKSPACES=$(kubectl get workspaces -o json |jq -r '["workspace","namespace","version" ], (.items[]|[.metadata.name,.spec.namespaceName,.status.version])|@tsv' |column -t)
     echo "Workspaces:"
-#    echo
-#    echo "$WORKSPACES"
+    echo
+    echo "$WORKSPACES"
     echo
     # Get the version of each workspace
     for WORKSPACE in $(echo "$WORKSPACES" | awk 'NR>1 {print $1}'); do
@@ -208,6 +208,8 @@ fi
 # Check workload clusters
 WKCLUSTERUPGRADEREQUIRED=0
 WORKLOADCLUSTERSJSON=$(kubectl get clusters.cluster.x-k8s.io -A -o json)
+KADMCPJSON=$(kubectl get kubeadmcontrolplanes -A -o json)
+
 
 if [[ $MGMTCLUSTERUPGRADEREQUIRED = "true" ]]; then
     WORKLOADCLUSTERS=$(echo "${WORKLOADCLUSTERSJSON}" | jq -r '.items[].metadata.name')
@@ -225,10 +227,8 @@ else
     echo
     # Get the version of each workload cluster
     for WKCLUSTER in $WORKLOADCLUSTERS; do
-        #CLUSTERNAMESPACE=$(echo "$WORKLOADCLUSTERS" |grep $WKCLUSTER | awk '{print $1}')
         CLUSTERNAMESPACE=$(echo "${WORKLOADCLUSTERSJSON}" | jq --arg WKCLUSTER "$WKCLUSTER" -r '.items[].metadata |select (.name ==  $WKCLUSTER) |.namespace')
-        echo "  Workload Cluster: $WKCLUSTER, namespace: $CLUSTERNAMESPACE"
-        WORKLOADCLUSTERVERSION=$(kubectl get clusters.cluster.x-k8s.io $WKCLUSTER -n $CLUSTERNAMESPACE -o json | jq -r '.spec.topology.version')
+        KUBERNETESVERSION=$(echo "$KADMCPJSON" |jq --arg WKCLUSTER "$WKCLUSTER" -r '.items[] |select(.metadata.labels."cluster.x-k8s.io/cluster-name" == $WKCLUSTER) |.spec.version')
         echo "  Workload Cluster: $WKCLUSTER, namespace: $CLUSTERNAMESPACE, Kubernetes Version: $KUBERNETESVERSION"
 
         if [[ "$CLIK8SVERSION"  == "$KUBERNETESVERSION" ]]; then
