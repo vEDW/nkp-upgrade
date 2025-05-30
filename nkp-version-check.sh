@@ -98,11 +98,11 @@ if [[ -z "$KOMANDERCRD" ]]; then
     exit 1
 fi
 #get nkp management cluster version
-NKPMGMTCLUSTER=$(kubectl get cluster -n default -o jsonpath='{.items[0].metadata.name}')
+NKPMGMTCLUSTER=$(kubectl get clusters.cluster.x-k8s.io -n default -o jsonpath='{.items[0].metadata.name}')
 echo
 echo "NKP Management Cluster name: $NKPMGMTCLUSTER"
 #get provider
-NKPPROVIDER=$(kubectl get cluster $NKPMGMTCLUSTER -n default -o json |jq -r '.metadata.labels."konvoy.d2iq.io/provider"')
+NKPPROVIDER=$(kubectl get clusters.cluster.x-k8s.io $NKPMGMTCLUSTER -n default -o json |jq -r '.metadata.labels."konvoy.d2iq.io/provider"')
 echo "NKP Management Cluster Provider: $NKPPROVIDER"
 
 KOMMANDERUPGRADEREQUIRED="false"
@@ -207,8 +207,14 @@ fi
 #------------------------------------------------------------------------------
 # Check workload clusters
 WKCLUSTERUPGRADEREQUIRED=0
-WORKLOADCLUSTERSJSON=$(kubectl get clusters -A -o json)
-WORKLOADCLUSTERS=$(echo "${WORKLOADCLUSTERSJSON}" | jq -r '.items[].metadata|select(.namespace != "default")|.name')
+WORKLOADCLUSTERSJSON=$(kubectl get clusters.cluster.x-k8s.io -A -o json)
+
+if [[ $MGMTCLUSTERUPGRADEREQUIRED = "true" ]]; then
+    WORKLOADCLUSTERS=$(echo "${WORKLOADCLUSTERSJSON}" | jq -r '.items[].metadata.name')
+else
+    WORKLOADCLUSTERS=$(echo "${WORKLOADCLUSTERSJSON}" | jq -r '.items[].metadata|select(.namespace != "default")|.name')
+fi
+
 #check if workload clusters are found
 if [[ -z "$WORKLOADCLUSTERS" ]]; then
     echo
@@ -222,7 +228,7 @@ else
         #CLUSTERNAMESPACE=$(echo "$WORKLOADCLUSTERS" |grep $WKCLUSTER | awk '{print $1}')
         CLUSTERNAMESPACE=$(echo "${WORKLOADCLUSTERSJSON}" | jq --arg WKCLUSTER "$WKCLUSTER" -r '.items[].metadata |select (.name ==  $WKCLUSTER) |.namespace')
         echo "  Workload Cluster: $WKCLUSTER, namespace: $CLUSTERNAMESPACE"
-        WORKLOADCLUSTERVERSION=$(kubectl get clusters $WKCLUSTER -n $CLUSTERNAMESPACE -o json | jq -r '.spec.topology.version')
+        WORKLOADCLUSTERVERSION=$(kubectl get clusters.cluster.x-k8s.io $WKCLUSTER -n $CLUSTERNAMESPACE -o json | jq -r '.spec.topology.version')
         echo "  Workload Cluster: $WKCLUSTER, namespace: $CLUSTERNAMESPACE, Kubernetes Version: $KUBERNETESVERSION"
 
         if [[ "$CLIK8SVERSION"  == "$KUBERNETESVERSION" ]]; then
@@ -250,7 +256,14 @@ else
                         WKRIMAGE=$(echo "${WKCLUSTERJSON}" |jq -r '.spec.topology.workers.machineDeployments[].variables.overrides[].value.nutanix.machineDetails.image.name')
                         echo "      Nutanix Worker Image: $WKRIMAGE"
                         echo
-                        get_nkp_nx_images
+                        NKPIMAGES=$(get_nkp_nx_images)
+                        if [[ -z "$NKPIMAGES" ]]; then
+                            echo
+                            echo "  No Nutanix images found for k8s version $SHORTCLIK8SVERSION"
+                            echo "  Please download or create NKP OS images for k8s version $SHORTCLIK8SVERSION" 
+                        else
+                            echo "$NKPIMAGES"
+                        fi
                         ;;
                     *)
                         echo "      other provider: $WORKLOADCLUSTERPROVIDER"
@@ -266,7 +279,6 @@ else
     done
 fi
 
-# print summary
 echo
 echo "Summary:"
 echo
