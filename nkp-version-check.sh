@@ -149,6 +149,7 @@ else
         echo "  $CLIK8SVERSION is higher than $MGMTKUBERNETESVERSION"
         echo "  upgrade mgmt cluster is recommended."
         MGMTCLUSTERUPGRADEREQUIRED="true"
+
     else
         echo "  $MGMTKUBERNETESVERSION is higher than $CLIK8SVERSION"
         echo "  upgrade NKP CLI is recommended."
@@ -229,7 +230,32 @@ else
     for WKCLUSTER in $WORKLOADCLUSTERS; do
         CLUSTERNAMESPACE=$(echo "${WORKLOADCLUSTERSJSON}" | jq --arg WKCLUSTER "$WKCLUSTER" -r '.items[].metadata |select (.name ==  $WKCLUSTER) |.namespace')
         KUBERNETESVERSION=$(echo "$KADMCPJSON" |jq --arg WKCLUSTER "$WKCLUSTER" -r '.items[] |select(.metadata.labels."cluster.x-k8s.io/cluster-name" == $WKCLUSTER) |.spec.version')
-        echo "  Workload Cluster: $WKCLUSTER, namespace: $CLUSTERNAMESPACE, Kubernetes Version: $KUBERNETESVERSION"
+        #check if kubernetes version is empty
+        if [[ -z "$KUBERNETESVERSION" ]]; then
+            echo "Kubernetes version not found for workload cluster $WKCLUSTER. Please check cluster object for spec.version."
+            echo "  Workload Cluster: $WKCLUSTER, namespace: $CLUSTERNAMESPACE"
+        else
+            echo "  Workload Cluster: $WKCLUSTER, namespace: $CLUSTERNAMESPACE, Kubernetes Version: $KUBERNETESVERSION"
+        fi
+        #Check machine versions match cluster version
+        MACHINEJSON=$(kubectl get machine -l "cluster.x-k8s.io/cluster-name"=$WKCLUSTER -n $CLUSTERNAMESPACE -o json)
+        MACHINEVERSIONS=$(echo "$MACHINEJSON" |jq -r '.items[]|.spec.version' |uniq)
+        if [[ -z "$MACHINEVERSIONS" ]]; then
+            echo "  No machine versions found for workload cluster $WKCLUSTER. Please check machine objects."
+        else
+            echo "  Machine Versions: $MACHINEVERSIONS"
+            #if more than 1 machine version found, check if they match
+            if [[ $(echo "$MACHINEVERSIONS" | wc -l) -gt 1 ]]; then
+                echo "  ⚠️ Warning: More than 1 machine version found for workload cluster $WKCLUSTER. Please check machine objects."
+            else
+            #check if machine version = cluster version
+                if [[ "$KUBERNETESVERSION" != "$MACHINEVERSIONS" ]]; then
+                    echo "  ⚠️ Warning: Machine version $MACHINEVERSIONS does not match cluster version $KUBERNETESVERSION. Please check machine objects."
+                else
+                    echo "  ✅ Machine version matches cluster version."
+                fi
+            fi
+        fi
 
         if [[ "$CLIK8SVERSION"  == "$KUBERNETESVERSION" ]]; then
             echo "  NKP CLI k8s version matches Mgmt cluster k8s version."
@@ -296,7 +322,7 @@ if [[ "$KOMMANDERVERSION" == "Kommander not found" ]]; then
     echo "  Kommander is not installed. Skipping Kommander upgrade."
 else
     if [[ "$KOMMANDERUPGRADEREQUIRED" == "true" ]]; then
-        echo "  Upgrade Kommander is required."
+        echo "  ⚠️ Upgrade Kommander is required."
         UPGRADEREQ="true"
     fi
 fi
@@ -306,17 +332,17 @@ if [[ "$MGMTCLUSTERUPGRADEREQUIRED" == "true" ]]; then
 fi
 if [[ "$KOMMANDERVERSION" != "Kommander not found" ]]; then
     if [[ "$WKSPACEUPGRADEREQUIRED" -gt 0 ]]; then
-        echo "  $WKSPACEUPGRADEREQUIRED Workspaces Upgrade required."
+        echo " ⚠️ $WKSPACEUPGRADEREQUIRED Workspaces Upgrade required."
         UPGRADEREQ="true"
     fi
 fi
 if [[ "$WKCLUSTERUPGRADEREQUIRED" -gt 0 ]]; then
-    echo "  $WKCLUSTERUPGRADEREQUIRED Workload Clusters Upgrade required."
+    echo " ⚠️ $WKCLUSTERUPGRADEREQUIRED Workload Clusters Upgrade required."
     UPGRADEREQ="true"
 fi
 
 if [[ "$UPGRADEREQ" != "true" ]]; then
-    echo "  No upgrades required."
+    echo "✅  No upgrades required."
 fi
 echo "  ========================================================="
 echo
