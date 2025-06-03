@@ -32,7 +32,7 @@ version_delta_check() {
   #absolute value of delta
   DELTA=${DELTA#-}
   if [[ $DELTA -ge 2 ]]; then
-    echo "  🛑  ALERT: The delta version is $DELTA, which is greater than or equal to 2."
+    echo "  🛑  ALERT: The NKP / kubernetes version difference is greater than or equal to 2. Please check the NKP/K8S upgrade documentation."
     echo "      NKP/K8S upgrade only supports 1 version difference (N-1 -> N)."
     DELTAERROR="true"
   else
@@ -341,10 +341,10 @@ echo "  ========================================================="
 UPGRADEREQ="false"
 
 if [[ "$DELTAERROR" == "true" ]]; then
-    echo "  🛑  ALERT: The delta version is greater than or equal to 2. Please check the NKP/K8S upgrade documentation."
+    echo "  🛑  ALERT: The NKP / kubernetes version difference is greater than or equal to 2. Please check the NKP/K8S upgrade documentation."
     exit 1
+    echo "  ========================================================="
 fi
-echo "  ========================================================="
 if [[ "$KOMMANDERVERSION" == "Kommander not found" ]]; then
     echo "  Kommander is not installed. Skipping Kommander upgrade."
 else
