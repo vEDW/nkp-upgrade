@@ -21,6 +21,24 @@ version_gt() {
   test "$(echo -e "$1\n$2" | sort -V | head -n1)" != "$1"
 }
 
+version_delta_check() {
+  # Function to check if the version is greater than or equal to the specified version
+  STARTVERSION="$1"
+  ENDVERSION="$2"
+  STARTMINOR=$(echo "$STARTVERSION" | cut -d'.' -f2)
+  ENDMINOR=$(echo "$ENDVERSION" | cut -d'.' -f2)
+  # Delta version check
+  DELTA=$(( ENDMINOR - STARTMINOR ))
+  if [[ $DELTA -ge 2 ]]; then
+    echo "  🛑  ALERT: The delta version is $DELTA, which is greater than or equal to 2."
+    echo "      NKP/K8S upgrade only supports 1 version difference (N-1 -> N)."
+    DELTAERROR="true"
+  else
+    echo "  ✅  The delta version is $DELTA, which is less than 2."
+  fi
+
+}
+
 get_nkp_nx_images() {
     # Function to get the list of available Nutanix NX images
     #get available images from PC
@@ -90,6 +108,7 @@ CLIK8SVERSION=${nkp_to_k8s_version[$NKPVER]}
 SHORTCLIK8SVERSION=$(echo $CLIK8SVERSION |sed 's/v//')
 
 echo "  corresponding k8s version is : ${CLIK8SVERSION}"
+DELTAERROR="false"
 
 #check if this is a NKP Management cluster
 KOMANDERCRD=$(kubectl  api-resources |grep cluster.x-k8s.io)
@@ -127,6 +146,7 @@ else
             echo "$NKPVER is higher than $KOMMANDERVERSION"
             echo "upgrade kommander is recommended."
             KOMMANDERUPGRADEREQUIRED="true"
+            version_delta_check "$NKPVER" "$KOMMANDERVERSION"
         else
             echo "$KOMMANDERVERSION is higher than $v2"
             echo "upgrade NKP CLI is recommended."
@@ -246,13 +266,13 @@ else
             echo "  Machine Versions: $MACHINEVERSIONS"
             #if more than 1 machine version found, check if they match
             if [[ $(echo "$MACHINEVERSIONS" | wc -l) -gt 1 ]]; then
-                echo "  ⚠️ Warning: More than 1 machine version found for workload cluster $WKCLUSTER. Please check machine objects."
+                echo "  ⚠️  Warning: More than 1 machine version found for workload cluster $WKCLUSTER. Please check machine objects."
             else
             #check if machine version = cluster version
                 if [[ "$KUBERNETESVERSION" != "$MACHINEVERSIONS" ]]; then
-                    echo "  ⚠️ Warning: Machine version $MACHINEVERSIONS does not match cluster version $KUBERNETESVERSION. Please check machine objects."
+                    echo "  ⚠️  Warning: Machine version $MACHINEVERSIONS does not match cluster version $KUBERNETESVERSION. Please check machine objects."
                 else
-                    echo "  ✅ Machine version matches cluster version."
+                    echo "  ✅  Machine version matches cluster version."
                 fi
             fi
         fi
@@ -318,11 +338,16 @@ echo "  NKP Management Cluster Kubernetes Version: $MGMTKUBERNETESVERSION"
 echo "  ========================================================="
 UPGRADEREQ="false"
 
+if [[ "$DELTAERROR" == "true" ]]; then
+    echo "  🛑  ALERT: The delta version is greater than or equal to 2. Please check the NKP/K8S upgrade documentation."
+    exit 1
+fi
+echo "  ========================================================="
 if [[ "$KOMMANDERVERSION" == "Kommander not found" ]]; then
     echo "  Kommander is not installed. Skipping Kommander upgrade."
 else
     if [[ "$KOMMANDERUPGRADEREQUIRED" == "true" ]]; then
-        echo "  ⚠️ Upgrade Kommander is required."
+        echo "  ⚠️  Upgrade Kommander is required."
         UPGRADEREQ="true"
     fi
 fi
@@ -332,12 +357,12 @@ if [[ "$MGMTCLUSTERUPGRADEREQUIRED" == "true" ]]; then
 fi
 if [[ "$KOMMANDERVERSION" != "Kommander not found" ]]; then
     if [[ "$WKSPACEUPGRADEREQUIRED" -gt 0 ]]; then
-        echo " ⚠️ $WKSPACEUPGRADEREQUIRED Workspaces Upgrade required."
+        echo " ⚠️  $WKSPACEUPGRADEREQUIRED Workspaces Upgrade required."
         UPGRADEREQ="true"
     fi
 fi
 if [[ "$WKCLUSTERUPGRADEREQUIRED" -gt 0 ]]; then
-    echo " ⚠️ $WKCLUSTERUPGRADEREQUIRED Workload Clusters Upgrade required."
+    echo " ⚠️  $WKCLUSTERUPGRADEREQUIRED Workload Clusters Upgrade required."
     UPGRADEREQ="true"
 fi
 
