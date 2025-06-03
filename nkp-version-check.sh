@@ -29,6 +29,8 @@ version_delta_check() {
   ENDMINOR=$(echo "$ENDVERSION" | cut -d'.' -f2)
   # Delta version check
   DELTA=$(( ENDMINOR - STARTMINOR ))
+  #absolute value of delta
+  DELTA=${DELTA#-}
   if [[ $DELTA -ge 2 ]]; then
     echo "  🛑  ALERT: The delta version is $DELTA, which is greater than or equal to 2."
     echo "      NKP/K8S upgrade only supports 1 version difference (N-1 -> N)."
