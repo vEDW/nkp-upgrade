@@ -288,25 +288,26 @@ else
         MACHINEJSON=$(kubectl get machine -l "cluster.x-k8s.io/cluster-name"=$WKCLUSTER -n $CLUSTERNAMESPACE -o json)
         MACHINEVERSIONS=$(echo "$MACHINEJSON" |jq -r '.items[]|.spec.version' |uniq)
         if [[ -z "$MACHINEVERSIONS" ]]; then
-            echo "  No machine versions found for workload cluster $WKCLUSTER. Please check machine objects."
+            echo "      No machine versions found for workload cluster $WKCLUSTER. Please check machine objects."
         else
-            echo "  Machine Versions: $MACHINEVERSIONS"
+            echo "      Machine Versions: $MACHINEVERSIONS"
             #if more than 1 machine version found, check if they match
             if [[ $(echo "$MACHINEVERSIONS" | wc -l) -gt 1 ]]; then
-                echo "  ⚠️  Warning: More than 1 machine version found for workload cluster $WKCLUSTER. Please check machine objects."
+                echo "          ⚠️  Warning: More than 1 machine version found for workload cluster $WKCLUSTER. Please check machine objects."
             else
             #check if machine version = cluster version
                 if [[ "$KUBERNETESVERSION" != "$MACHINEVERSIONS" ]]; then
-                    echo "  ⚠️  Warning: Machine version $MACHINEVERSIONS does not match cluster version $KUBERNETESVERSION. Please check machine objects."
+                    echo "          ⚠️  Warning: Machine version $MACHINEVERSIONS does not match cluster version $KUBERNETESVERSION. Please check machine objects."
                 else
-                    echo "  ✅  Machine version matches cluster version."
+                    echo "          ✅  Machine version matches cluster version."
                 fi
             fi
         fi
 
         if [[ "$CLIK8SVERSION"  == "$KUBERNETESVERSION" ]]; then
-            echo "  NKP CLI k8s version matches Mgmt cluster k8s version."
-            echo "  Skip cluster kubernetes upgrade"
+            echo "    NKP CLI k8s version matches workload cluster k8s version."
+            echo "    Skip cluster kubernetes upgrade"
+            echo
         else
             #check if cli version is higher than management cluster version 
             if version_gt "$CLIK8SVERSION" "$KUBERNETESVERSION"; then
