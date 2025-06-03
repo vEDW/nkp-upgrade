@@ -342,8 +342,8 @@ UPGRADEREQ="false"
 
 if [[ "$DELTAERROR" == "true" ]]; then
     echo "  🛑  ALERT: The NKP / kubernetes version difference is greater than or equal to 2. Please check the NKP/K8S upgrade documentation."
-    exit 1
     echo "  ========================================================="
+    exit 1
 fi
 if [[ "$KOMMANDERVERSION" == "Kommander not found" ]]; then
     echo "  Kommander is not installed. Skipping Kommander upgrade."
