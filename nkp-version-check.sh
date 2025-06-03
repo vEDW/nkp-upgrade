@@ -62,6 +62,30 @@ get_nkp_nx_images() {
     done
 }
 
+get_cluster_k8s_version() {
+    # Function to get the Kubernetes version from a specific cluster
+    CLUSTER_NAME="$1"
+    #Get namespace from cluster name
+    WORKLOADCLUSTERSJSON=$(kubectl get clusters.cluster.x-k8s.io -A -o json)
+    CLUSTERNAMESPACE=$(echo "${WORKLOADCLUSTERSJSON}" | jq --arg WKCLUSTER "$CLUSTER_NAME" -r '.items[].metadata |select (.name ==  $WKCLUSTER) |.namespace')
+
+    if [[ -z "$CLUSTERNAMESPACE" ]]; then
+        echo "Namespace not found for cluster $CLUSTER_NAME. Please check the cluster object."
+        return 1
+    fi
+    # try cluster spec.version first
+    KUBERNETESVERSION=$(kubectl get clusters.cluster.x-k8s.io $CLUSTER_NAME -n $CLUSTERNAMESPACE -o jsonpath='{.spec.topology.version}')
+    if [[ -z "$KUBERNETESVERSION" ]]; then
+        # if spec.version is empty, try kubeadmcontrolplane.spec.version
+        KADMCPJSON=$(kubectl get kubeadmcontrolplanes -A -o json)
+        KUBERNETESVERSION=$(echo "$KADMCPJSON" |jq --arg WKCLUSTER "$CLUSTER_NAME" -r '.items[] |select(.metadata.labels."cluster.x-k8s.io/cluster-name" == $WKCLUSTER) |.spec.version')
+        if [[ -z "$KUBERNETESVERSION" ]]; then
+            echo "Kubernetes version not found for cluster $CLUSTER_NAME. Please check the cluster object."
+            return 1
+        fi
+    fi
+}
+
 #------------------------------------------------------------------------------
 #NKP Version array
 declare -A nkp_to_k8s_version
@@ -251,7 +275,8 @@ else
     # Get the version of each workload cluster
     for WKCLUSTER in $WORKLOADCLUSTERS; do
         CLUSTERNAMESPACE=$(echo "${WORKLOADCLUSTERSJSON}" | jq --arg WKCLUSTER "$WKCLUSTER" -r '.items[].metadata |select (.name ==  $WKCLUSTER) |.namespace')
-        KUBERNETESVERSION=$(echo "$KADMCPJSON" |jq --arg WKCLUSTER "$WKCLUSTER" -r '.items[] |select(.metadata.labels."cluster.x-k8s.io/cluster-name" == $WKCLUSTER) |.spec.version')
+        #KUBERNETESVERSION=$(echo "$KADMCPJSON" |jq --arg WKCLUSTER "$WKCLUSTER" -r '.items[] |select(.metadata.labels."cluster.x-k8s.io/cluster-name" == $WKCLUSTER) |.spec.version')
+        get_cluster_k8s_version "$WKCLUSTER"
         #check if kubernetes version is empty
         if [[ -z "$KUBERNETESVERSION" ]]; then
             echo "Kubernetes version not found for workload cluster $WKCLUSTER. Please check cluster object for spec.version."
