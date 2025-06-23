@@ -49,6 +49,12 @@ get_nkp_nx_images() {
     export PCADMIN=$(echo "$PCSECRET" |jq -r '.[].data.prismCentral.username')
     export PCPASSWD=$(echo "$PCSECRET" |jq -r '.[].data.prismCentral.password')
     source ./functions/fct_nutanix-pc_rest_api_v4_curl.sh
+    IMAGESCOUNT=$(get_images_filter "contains(name,'$SHORTCLIK8SVERSION')" |jq '.data |length' )
+    if [[ "$IMAGESCOUNT" -eq 0 ]]; then
+        echo 
+        echo "  No Nutanix images found for k8s version $SHORTCLIK8SVERSION"
+        return
+    fi
     IMAGES=$(get_images_filter "contains(name,'$SHORTCLIK8SVERSION')" |jq -r '.data[].name')
     if [[ -z "$IMAGES" ]]; then
         echo 
@@ -60,6 +66,30 @@ get_nkp_nx_images() {
     for IMAGE in $IMAGES; do
             echo "          - $IMAGE"
     done
+}
+
+get_nkp_vsphere_images() {
+    # Function to get the list of available vSphere Template images
+    
+#TO DO  : check ClusterResourceSet for secretRef
+#    CREDSECRET=$(echo "$WKCLUSTERJSON" |jq -r '.spec.topology.variables[].value.nutanix.prismCentralEndpoint.credentials.secretRef.name' |xargs -I {} kubectl get secret {} -n $CLUSTERNAMESPACE -o json |jq -r '.data.credentials'|base64 -d)
+
+    export GOVC_URL=$(echo "$CREDSECRET")
+    export GOVC_USERNAME=$(echo "$CREDSECRET" |jq -r '.[].data.vsphere.username')
+    export GOVC_PASSWORD=$(echo "$CREDSECRET" |jq -r '.[].data.vsphere.password')
+
+    IMAGES=$(govc find $GOVC_DATACENTER -type m |xargs govc vm.info -json  |jq -r '.virtualMachines[]|select (.config.template == true ) |.name' |grep $SHORTCLIK8SVERSION)
+
+    if [[ -z "$IMAGES" ]]; then
+        echo 
+        echo "  No vSphere template found for k8s version $SHORTCLIK8SVERSION"
+    else
+        # Loop through the images and print them
+        echo "vSphere Templates for k8s version $SHORTCLIK8SVERSION:"
+        for IMAGE in $IMAGES; do
+                echo "          - $IMAGE"
+        done
+    fi
 }
 
 get_cluster_k8s_version() {
@@ -100,6 +130,12 @@ nkp_to_k8s_version=(
   [v2.12.0]=v1.29.6
 )
 #------------------------------------------------------------------------------
+# Reset VARIABLES
+
+DELTAERROR="false"
+NUTANIXIMAGEMISSING="false"
+MACHINEVERSIONSALERT="false"
+#------------------------------------------------------------------------------
 
 #Select management cluster kubectl context
 if ! command -v kubectl &> /dev/null; then
@@ -134,7 +170,6 @@ CLIK8SVERSION=${nkp_to_k8s_version[$NKPVER]}
 SHORTCLIK8SVERSION=$(echo $CLIK8SVERSION |sed 's/v//')
 
 echo "  corresponding k8s version is : ${CLIK8SVERSION}"
-DELTAERROR="false"
 
 #check if this is a NKP Management cluster
 KOMANDERCRD=$(kubectl  api-resources |grep cluster.x-k8s.io)
@@ -333,15 +368,22 @@ else
                         NKPIMAGES=$(get_nkp_nx_images)
                         if [[ -z "$NKPIMAGES" ]]; then
                             echo
-                            echo "  No Nutanix images found for k8s version $SHORTCLIK8SVERSION"
-                            echo "  Please download or create NKP OS images for k8s version $SHORTCLIK8SVERSION" 
+                            echo "  ⚠️  No Nutanix images found for k8s version $SHORTCLIK8SVERSION"
+                            echo "      Please download or create NKP OS images for k8s version $SHORTCLIK8SVERSION" 
+                            NUTANIXIMAGEMISSING="true"
                         else
                             echo "$NKPIMAGES"
                         fi
                         ;;
+                    "vsphere")
+                        echo "      vsphere provider: $WORKLOADCLUSTERPROVIDER"
+                        echo "      vSphere Machine Templates:"
+
+                        kubectl get vspheremachinetemplates -n $CLUSTERNAMESPACE  -o json |jq --arg WKCLUSTER "$WKCLUSTER" -r '.items[]|select(.metadata.ownerReferences[].name == $WKCLUSTER)|[.metadata.name, .spec.template.spec.template]|@tsv' |column -t
+
+                        ;;
                     *)
                         echo "      other provider: $WORKLOADCLUSTERPROVIDER"
-                        exit 1
                         ;;
                 esac
                 echo
@@ -380,17 +422,23 @@ else
     fi
 fi
 if [[ "$MGMTCLUSTERUPGRADEREQUIRED" == "true" ]]; then
-    echo "  Upgrade Management Cluster is required."
+    echo "  ⚠️  Upgrade Management Cluster is required."
         UPGRADEREQ="true"
 fi
 if [[ "$KOMMANDERVERSION" != "Kommander not found" ]]; then
     if [[ "$WKSPACEUPGRADEREQUIRED" -gt 0 ]]; then
-        echo " ⚠️  $WKSPACEUPGRADEREQUIRED Workspaces Upgrade required."
+        echo "  ⚠️  $WKSPACEUPGRADEREQUIRED Workspaces Upgrade required."
         UPGRADEREQ="true"
     fi
 fi
 if [[ "$WKCLUSTERUPGRADEREQUIRED" -gt 0 ]]; then
-    echo " ⚠️  $WKCLUSTERUPGRADEREQUIRED Workload Clusters Upgrade required."
+    echo "  ⚠️  $WKCLUSTERUPGRADEREQUIRED Workload Clusters Upgrade required."
+    UPGRADEREQ="true"
+fi
+
+if [[ "$NUTANIXIMAGEMISSING" == "true" ]]; then
+    echo "  🛑  ALERT:  Nutanix images for k8s version $SHORTCLIK8SVERSION are missing."
+    echo "      Please download or create NKP OS images for k8s version $SHORTCLIK8SVERSION"
     UPGRADEREQ="true"
 fi
 
