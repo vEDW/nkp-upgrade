@@ -120,6 +120,7 @@ get_cluster_k8s_version() {
 #NKP Version array
 declare -A nkp_to_k8s_version
 nkp_to_k8s_version=(
+  [v2.16.0]=v1.33.2
   [v2.15.1]=v1.32.3
   [v2.15.0]=v1.32.3
   [v2.14.2]=v1.31.9
