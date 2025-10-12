@@ -117,23 +117,25 @@ get_cluster_k8s_version() {
 }
 
 #------------------------------------------------------------------------------
-#NKP Version array
-declare -A nkp_to_k8s_version
-nkp_to_k8s_version=(
-  [v2.16.0]=v1.33.2
-  [v2.15.1]=v1.32.3
-  [v2.15.0]=v1.32.3
-  [v2.14.2]=v1.31.9
-  [v2.14.1]=v1.31.9
-  [v2.14.0]=v1.31.4
-  [v2.13.3]=v1.30.10
-  [v2.13.2]=v1.30.10
-  [v2.13.1]=v1.30.5
-  [v2.13.0]=v1.30.3
-  [v2.12.2]=v1.29.9
-  [v2.12.1]=v1.29.9
-  [v2.12.0]=v1.29.6
-)
+# #NKP Version array
+# declare -A nkp_to_k8s_version
+# nkp_to_k8s_version=(
+#   [v2.16.0]=v1.33.2
+#   [v2.15.1]=v1.32.3
+#   [v2.15.0]=v1.32.3
+#   [v2.14.2]=v1.31.9
+#   [v2.14.1]=v1.31.9
+#   [v2.14.0]=v1.31.4
+#   [v2.13.3]=v1.30.10
+#   [v2.13.2]=v1.30.10
+#   [v2.13.1]=v1.30.5
+#   [v2.13.0]=v1.30.3
+#   [v2.12.2]=v1.29.9
+#   [v2.12.1]=v1.29.9
+#   [v2.12.0]=v1.29.6
+# )
+# Load nkp version array
+source nkp-version-check.sh
 #------------------------------------------------------------------------------
 # Reset VARIABLES
 
@@ -191,34 +193,50 @@ NKPPROVIDER=$(kubectl get clusters.cluster.x-k8s.io $NKPMGMTCLUSTER -n default -
 echo "NKP Management Cluster Provider: $NKPPROVIDER"
 
 KOMMANDERUPGRADEREQUIRED="false"
-#Get the version of kommander
+#Get the version of kommander using HelmRelease (for NKP <2.16)
 KOMMANDERVERSION=$(kubectl get hr -n kommander kommander-appmanagement -o jsonpath='{.spec.chart.spec.version}')
 #check if field empty
 if [[ -z "$KOMMANDERVERSION" ]]; then
     echo "Kommander version not found. Please check if Kommander is installed."
     KOMMANDERVERSION="Kommander not found"
-else
-    echo
-    echo "Kommander Version: $KOMMANDERVERSION"
-    #compare cli version with management cluster version
-    if [[ "$NKPVER" == "$KOMMANDERVERSION" ]]; then
-        echo "  NKP CLI version matches Kommander version."
-        echo "  Skip kommander upgrade"
-        KOMMANDERFLUXVERSION=$(kubectl get appdeployments -n kommander kommander-flux |awk 'NR>1 {print $2}' |rev |cut -d"-" -f1|rev)
-        echo "  Kommander Flux Version: $KOMMANDERFLUXVERSION"
-    else
-        #check if cli version is higher than management cluster version 
-        if version_gt "$NKPVER" "$KOMMANDERVERSION"; then
-            echo "$NKPVER is higher than $KOMMANDERVERSION"
-            echo "upgrade kommander is recommended."
-            KOMMANDERUPGRADEREQUIRED="true"
-            version_delta_check "$NKPVER" "$KOMMANDERVERSION"
-        else
-            echo "$KOMMANDERVERSION is higher than $v2"
-            echo "upgrade NKP CLI is recommended."
-        fi
-    fi
 fi
+#Get the version of kommander using OciRepo (for NKP >= 2.16)
+#check if KOMMANDERVERSION is empty
+if [[ "$KOMMANDERVERSION" == "Kommander not found" ]]; then
+    KOMMANDERVERSION=$(kubectl get ocirepositories -n kommander kommander-appmanagement-chart -o jsonpath='{.spec.ref.tag}')
+    if [[ -z "$KOMMANDERVERSION" ]]; then
+        echo "Kommander version not found. Please check if Kommander is installed."
+        KOMMANDERVERSION="Kommander not found"
+    fi  
+fi
+
+#Check if Kommanderversion is still empty
+if [[ "$KOMMANDERVERSION" == "Kommander not found" ]]; then
+    KOMMANDERFLUXVERSION="Kommander not found"
+    echo "Kommander is not installed. Skipping workspace version check."
+else
+        echo
+        echo "Kommander Version: $KOMMANDERVERSION"
+        #compare cli version with management cluster version
+        if [[ "$NKPVER" == "$KOMMANDERVERSION" ]]; then
+            echo "  NKP CLI version matches Kommander version."
+            echo "  Skip kommander upgrade"
+            KOMMANDERFLUXVERSION=$(kubectl get appdeployments -n kommander kommander-flux |awk 'NR>1 {print $2}' |rev |cut -d"-" -f1|rev)
+            echo "  Kommander Flux Version: $KOMMANDERFLUXVERSION"
+        else
+            #check if cli version is higher than management cluster version 
+            if version_gt "$NKPVER" "$KOMMANDERVERSION"; then
+                echo "$NKPVER is higher than $KOMMANDERVERSION"
+                echo "upgrade kommander is recommended."
+                KOMMANDERUPGRADEREQUIRED="true"
+                version_delta_check "$NKPVER" "$KOMMANDERVERSION"
+            else
+                echo "$KOMMANDERVERSION is higher than $v2"
+                echo "upgrade NKP CLI is recommended."
+            fi
+        fi
+fi
+
 MGMTCLUSTERUPGRADEREQUIRED="false"
 # Get the version of the kubernetes cluster
 MGMTKUBERNETESVERSION=$(kubectl version | grep Server | awk '{print $3}')
