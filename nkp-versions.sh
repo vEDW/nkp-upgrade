@@ -1,5 +1,5 @@
 declare -A nkp_to_k8s_version
-nkp_to_k8s_version=(
+export nkp_to_k8s_version=(
   [v2.16.0]=v1.33.2
   [v2.15.1]=v1.32.3
   [v2.15.0]=v1.32.3
