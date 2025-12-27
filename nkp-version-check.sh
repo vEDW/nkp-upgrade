@@ -120,7 +120,7 @@ get_cluster_k8s_version() {
 # #NKP Version array
 declare -A nkp_to_k8s_version
 nkp_to_k8s_version=(
-  [v2.17.O]=v1.34.1
+  [v2.17.0]=v1.34.1
   [v2.16.1]=v1.33.5
   [v2.16.0]=v1.33.2
   [v2.15.2]=v1.32.8
@@ -198,7 +198,7 @@ KOMMANDERUPGRADEREQUIRED="false"
 KOMMANDERVERSION=$(kubectl get hr -n kommander kommander-appmanagement -o jsonpath='{.spec.chart.spec.version}')
 #check if field empty
 if [[ -z "$KOMMANDERVERSION" ]]; then
-    echo "Kommander version not found. Please check if Kommander is installed."
+    #echo "Kommander version not found. Please check if Kommander is installed."
     KOMMANDERVERSION="Kommander not found"
 fi
 #Get the version of kommander using OciRepo (for NKP >= 2.16)
