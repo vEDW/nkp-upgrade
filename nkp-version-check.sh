@@ -469,9 +469,6 @@ if [[ -n "$NONRUNNINGMACHINES" ]]; then
     echo
     echo "  🛑  ALERT: Found non-running machines:"
     echo
-    echo "$NONRUNNINGMACHINES"
-    echo
-    echo "  Please check the machines and resolve the issues before upgrading."
 else
     echo "  ✅  All machines are in Running state."
 fi
@@ -503,6 +500,7 @@ if [[ -n "$NONRUNNINGMACHINES" ]]; then
     echo "  Please check the machines and resolve the issues before upgrading."
     echo "  ========================================================="
 
+    exit 1
 fi
 
 if [[ "$KOMMANDERVERSION" == "Kommander not found" ]]; then
