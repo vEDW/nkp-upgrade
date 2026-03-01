@@ -514,11 +514,9 @@ fi
 if [[ "$UPGRADEREQ" != "true" ]]; then
     echo "✅  No upgrades required."
 fi
-echo "  ========================================================="
-echo
-echo "  ==================Upgrade commands hints================="
-echo
-echo "  These are hints and may not be the exact command you need to run, please check documentation for details and validation before running any upgrade command."
+
+# ask if hints are desired ?
+read -p "Press enter to see upgrade hints and example commands or CTRL-C to quit"
 echo
 
 case $MGMTREGISTRYMIRROR in
