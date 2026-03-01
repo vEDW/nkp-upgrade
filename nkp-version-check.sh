@@ -462,6 +462,11 @@ else
     done
 fi
 
+# Check no machine are in non running state
+echo "Checking for non-running machines..."
+NONRUNNINGMACHINES=$(kubectl get machines -A --no-headers| grep -v Running)
+
+
 echo
 echo "Summary:"
 echo
@@ -480,6 +485,17 @@ if [[ "$DELTAERROR" == "true" ]]; then
     echo "  ========================================================="
     exit 1
 fi
+
+if [[ -n "$NONRUNNINGMACHINES" ]]; then
+    echo "  🛑  ALERT: Found non-running machines:"
+    echo
+    echo "$NONRUNNINGMACHINES"
+    echo
+    echo "  Please check the machines and resolve the issues before upgrading."
+    echo "  ========================================================="
+
+fi
+
 if [[ "$KOMMANDERVERSION" == "Kommander not found" ]]; then
     echo "  Kommander is not installed. Skipping Kommander upgrade."
 else
