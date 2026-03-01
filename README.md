@@ -8,4 +8,6 @@ to assess the current state of a NKP setup use the script : [nkp-version-check.s
 
 It will ask to select kubeconfig context pointing to your management cluster and provide a summary of the upgrade steps.
 
+Current phase : focused on nutanix based deployment.
+Other provider validation and upgrade hints will follow.
 

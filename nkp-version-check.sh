@@ -465,7 +465,16 @@ fi
 # Check no machine are in non running state
 echo "Checking for non-running machines..."
 NONRUNNINGMACHINES=$(kubectl get machines -A --no-headers| grep -v Running)
-
+if [[ -n "$NONRUNNINGMACHINES" ]]; then
+    echo
+    echo "  🛑  ALERT: Found non-running machines:"
+    echo
+    echo "$NONRUNNINGMACHINES"
+    echo
+    echo "  Please check the machines and resolve the issues before upgrading."
+else
+    echo "  ✅  All machines are in Running state."
+fi
 
 echo
 echo "Summary:"
