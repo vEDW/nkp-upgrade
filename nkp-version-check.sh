@@ -552,30 +552,29 @@ if [[ "$KOMMANDERUPGRADEREQUIRED" == "true" ]]; then
     echo
     echo "  nkp upgrade kommander" 
     echo
-fi
-
-
-if [[ "$MGMTCLUSTERUPGRADEREQUIRED" == "true" ]]; then
-    echo  
-    echo "  Example command to upgrade Management Cluster using nkp cli:"
-    echo
-    echo "  nkp upgrade cluster nutanix -c $NKPMGMTCLUSTER -n default --vm-image <new-os-image-name>" 
-    echo
-    echo "  available images are:"
-    get_nkp_nx_images
-    echo
-fi
-
-if [[ "$WKCLUSTERUPGRADEREQUIRED" -gt 0 ]]; then
-    echo  
-    echo "  Example command to upgrade Workload Cluster using nkp cli:"
-    echo
-    for CLUSTER in $WKCLUSTERTOUPGRADE; do
-        CLUSTERNAMESPACE=$(kubectl get cluster -A |grep $CLUSTER |awk '{print $1}')
-        echo "  nkp upgrade cluster nutanix -c $CLUSTER -n $CLUSTERNAMESPACE --vm-image <new-os-image-name>" 
-    done
-    echo
-    echo "  available images are:"
-    get_nkp_nx_images
-    echo
+else
+    if [[ "$MGMTCLUSTERUPGRADEREQUIRED" == "true" ]]; then
+        echo  
+        echo "  Example command to upgrade Management Cluster using nkp cli:"
+        echo
+        echo "  nkp upgrade cluster nutanix -c $NKPMGMTCLUSTER -n default --vm-image <new-os-image-name>" 
+        echo
+        echo "  available images are:"
+        get_nkp_nx_images
+        echo
+    else
+        if [[ "$WKCLUSTERUPGRADEREQUIRED" -gt 0 ]]; then
+            echo  
+            echo "  Example command to upgrade Workload Cluster using nkp cli:"
+            echo
+            for CLUSTER in $WKCLUSTERTOUPGRADE; do
+                CLUSTERNAMESPACE=$(kubectl get cluster -A |grep $CLUSTER |awk '{print $1}')
+                echo "  nkp upgrade cluster nutanix -c $CLUSTER -n $CLUSTERNAMESPACE --vm-image <new-os-image-name>" 
+            done
+            echo
+            echo "  available images are:"
+            get_nkp_nx_images
+            echo
+        fi
+    fi
 fi
