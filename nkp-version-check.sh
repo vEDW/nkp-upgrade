@@ -68,30 +68,6 @@ get_nkp_nx_images() {
     done
 }
 
-get_nkp_vsphere_images() {
-    # Function to get the list of available vSphere Template images
-    
-#TO DO  : check ClusterResourceSet for secretRef
-#    CREDSECRET=$(echo "$WKCLUSTERJSON" |jq -r '.spec.topology.variables[].value.nutanix.prismCentralEndpoint.credentials.secretRef.name' |xargs -I {} kubectl get secret {} -n $CLUSTERNAMESPACE -o json |jq -r '.data.credentials'|base64 -d)
-
-    export GOVC_URL=$(echo "$CREDSECRET")
-    export GOVC_USERNAME=$(echo "$CREDSECRET" |jq -r '.[].data.vsphere.username')
-    export GOVC_PASSWORD=$(echo "$CREDSECRET" |jq -r '.[].data.vsphere.password')
-
-    IMAGES=$(govc find $GOVC_DATACENTER -type m |xargs govc vm.info -json  |jq -r '.virtualMachines[]|select (.config.template == true ) |.name' |grep $SHORTCLIK8SVERSION)
-
-    if [[ -z "$IMAGES" ]]; then
-        echo 
-        echo "  No vSphere template found for k8s version $SHORTCLIK8SVERSION"
-    else
-        # Loop through the images and print them
-        echo "vSphere Templates for k8s version $SHORTCLIK8SVERSION:"
-        for IMAGE in $IMAGES; do
-                echo "          - $IMAGE"
-        done
-    fi
-}
-
 get_cluster_k8s_version() {
     # Function to get the Kubernetes version from a specific cluster
     CLUSTER_NAME="$1"
@@ -116,10 +92,62 @@ get_cluster_k8s_version() {
     fi
 }
 
+get_nkp_cluster_registry_mirror() {
+    # Function to check if the cluster has registry mirror, internal mirror or nothing
+    CLUSTER_NAME="$1"
+    CLUSTERNAMESPACE="$2"
+
+    #check if internal registry
+    INTERNALMIRROR=$(kubectl get clusters.cluster.x-k8s.io $CLUSTER_NAME -n $CLUSTERNAMESPACE -o jsonpath='{.spec.topology.variables[].value.addons.registry.provider}')
+    if [[ "$INTERNALMIRROR" == "CNCF Distribution" ]]; then
+        echo "internal registry mirror"
+    else
+        #check if registry mirror
+        REGISTRYMIRROR=$(kubectl get clusters.cluster.x-k8s.io $CLUSTER_NAME -n $CLUSTERNAMESPACE -o jsonpath='{.spec.topology.variables[].value.globalImageRegistryMirror.url}')
+        if [[ "$REGISTRYMIRROR" == "mirror" ]]; then
+            echo "Global registry mirror : $REGISTRYMIRROR"
+        else
+            echo "no registry mirror"
+        fi
+    fi
+}
+
+get_cluster_infra_provider() {
+    # Function to get the infrastructure provider for a cluster
+    CLUSTER_NAME="$1"
+    CLUSTERNAMESPACE="$2"
+
+    PROVIDER=$(kubectl get clusters.cluster.x-k8s.io $CLUSTER_NAME -n $CLUSTERNAMESPACE -o jsonpath='{.metadata.labels."konvoy.d2iq.io/provider"}')
+    if [[ -z "$PROVIDER" ]]; then
+        echo "Provider not found for cluster $CLUSTER_NAME. Please check the cluster object."
+        return 1
+    else
+        echo "$PROVIDER"
+    fi
+}
+
+get_cluster_upgrade_os_image(){
+    #WIP
+    # Function to get the upgrade OS image for a cluster
+    CLUSTER_NAME="$1"
+    CLUSTERNAMESPACE="$2"
+
+    UPGRADEOSIMAGE=$(kubectl get clusters.cluster.x-k8s.io $CLUSTER_NAME -n $CLUSTERNAMESPACE -o jsonpath='{.spec.topology.variables[].value.upgradeOSImage}')
+    if [[ -z "$UPGRADEOSIMAGE" ]]; then
+        echo "Upgrade OS image not found for cluster $CLUSTER_NAME. Please check the cluster object."
+        return 1
+    else
+        echo "$UPGRADEOSIMAGE"
+    fi
+
+
+}
+
 #------------------------------------------------------------------------------
 # #NKP Version array
 declare -A nkp_to_k8s_version
 nkp_to_k8s_version=(
+  [v2.17.1]=v1.34.2
   [v2.17.0]=v1.34.1
   [v2.16.1]=v1.33.5
   [v2.16.0]=v1.33.2
@@ -185,6 +213,7 @@ if [[ -z "$KOMANDERCRD" ]]; then
     echo "This is not a NKP Management Cluster. Please select a valid management cluster."
     exit 1
 fi
+
 #get nkp management cluster version
 NKPMGMTCLUSTER=$(kubectl get clusters.cluster.x-k8s.io -n default -o jsonpath='{.items[0].metadata.name}')
 echo
@@ -239,6 +268,14 @@ else
         fi
 fi
 
+#check if mgmt cluster has registry mirror, internalmirror or nothing
+MGMTCLUSTERNAME=$(kubectl get clusters.cluster.x-k8s.io -n default -o jsonpath='{.items[0].metadata.name}')
+MGMTCLUSTERNAMESPACE="default"
+MGMTREGISTRYMIRROR=$(get_nkp_cluster_registry_mirror "$MGMTCLUSTERNAME" "$MGMTCLUSTERNAMESPACE")
+echo "NKP Management Cluster registry mirror: $MGMTREGISTRYMIRROR"
+
+
+#Check if Mgmtm cluster needs upgrade
 MGMTCLUSTERUPGRADEREQUIRED="false"
 # Get the version of the kubernetes cluster
 MGMTKUBERNETESVERSION=$(kubectl version | grep Server | awk '{print $3}')
@@ -375,9 +412,10 @@ else
                 echo "      upgrade cluster is recommended."
                 #increase the upgrade required counter
                 WKCLUSTERUPGRADEREQUIRED=$((WKCLUSTERUPGRADEREQUIRED + 1))
+
                 #Get the provider for each workload cluster
                 WKCLUSTERJSON=$(kubectl get cluster $WKCLUSTER -n $CLUSTERNAMESPACE -o json)
-                WORKLOADCLUSTERPROVIDER=$(echo "${WKCLUSTERJSON}"  |jq -r '.metadata.labels."konvoy.d2iq.io/provider"')
+                WORKLOADCLUSTERPROVIDER=$(get_cluster_infra_provider "$WKCLUSTER" "$CLUSTERNAMESPACE")
                 # need to expand for non nutanix providers
                 case $WORKLOADCLUSTERPROVIDER in
                     "nutanix")
@@ -412,6 +450,7 @@ else
                         ;;
                 esac
                 echo
+
             else
                 echo "$KUBERNETESVERSION is higher than $CLIK8SVERSION"
                 echo "upgrade NKP CLI is recommended."
@@ -472,4 +511,53 @@ if [[ "$UPGRADEREQ" != "true" ]]; then
 fi
 echo "  ========================================================="
 echo
+echo "  ==================Upgrade commands hints================="
+echo
+echo "  These are hints and may not be the exact command you need to run, please check documentation for details and validation before running any upgrade command."
+echo
 
+case $MGMTREGISTRYMIRROR in
+
+    "internal registry mirror")
+        echo "  Management Cluster has internal registry mirror configured."
+        echo "  please ensure you pushed airgap bundle to internal registry mirror before upgrading."
+        echo
+        echo "  Example command to push airgap bundle to internal registry mirror using nkp cli:"
+        echo
+        echo "  nkp push bundle --bundle <path to KONVOYIMAGES>,<path to KOMMANDERIMAGES --to-internal-registry-mirror"
+        echo
+        ;;
+    "Global registry mirror"*)
+        echo "  Management Cluster has global registry mirror configured."
+        echo "  please ensure you pushed airgap bundle to registry mirror before upgrading."
+        echo
+        echo "  Refer to documentation. Hints to be added soon."
+        ;;
+    "no registry mirror")
+        echo "  NKP Manament Cluster does not have a registry mirror configured."
+        echo "  Assuming online connectivity for upgrade."
+        ;;
+    *)
+        echo "  Unknown registry mirror type: $MGMTREGISTRYMIRROR. Please check the cluster configuration."
+        ;;
+esac
+
+if [[ "$KOMMANDERUPGRADEREQUIRED" == "true" ]]; then
+    echo  
+    echo "  Example command to upgrade Kommander using nkp cli:"
+    echo
+    echo "  nkp upgrade kommander" 
+    echo
+fi
+
+
+if [[ "$MGMTCLUSTERUPGRADEREQUIRED" == "true" ]]; then
+    echo  
+    echo "  Example command to upgrade Management Cluster using nkp cli:"
+    echo
+    echo "  nkp upgrade cluster $NKPMGMTCLUSTER -n default --vm-image <new-os-image-name>" 
+    echo
+    echo "  available images are:"
+    get_nkp_nx_images
+    echo
+fi
