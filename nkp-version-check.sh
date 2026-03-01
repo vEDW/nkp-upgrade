@@ -318,6 +318,7 @@ else
         echo
     fi
     # Get the list of workspaces
+    WKSTOUPGRADE=""
     WORKSPACES=$(kubectl get workspaces -o json |jq -r '["workspace","namespace","version" ], (.items[]|[.metadata.name,.spec.namespaceName,.status.version])|@tsv' |column -t)
     echo "Workspaces:"
     echo
@@ -340,6 +341,7 @@ else
                 echo "      upgrade workspace is recommended."
                 #increase the upgrade required counter
                 WKSPACEUPGRADEREQUIRED=$((WKSPACEUPGRADEREQUIRED + 1))
+                WKSTOUPGRADE="$WKSTOUPGRADE $WORKSPACE"
             else
                 echo "      $WORKSPACEVERSION is higher than $KOMMANDERFLUXVERSION"
                 echo "      upgrade NKP CLI is recommended."
@@ -370,6 +372,7 @@ else
     echo "Workload Clusters:"
     echo
     # Get the version of each workload cluster
+    WKCLUSTERTOUPGRADE=""
     for WKCLUSTER in $WORKLOADCLUSTERS; do
         CLUSTERNAMESPACE=$(echo "${WORKLOADCLUSTERSJSON}" | jq --arg WKCLUSTER "$WKCLUSTER" -r '.items[].metadata |select (.name ==  $WKCLUSTER) |.namespace')
         #KUBERNETESVERSION=$(echo "$KADMCPJSON" |jq --arg WKCLUSTER "$WKCLUSTER" -r '.items[] |select(.metadata.labels."cluster.x-k8s.io/cluster-name" == $WKCLUSTER) |.spec.version')
@@ -412,7 +415,7 @@ else
                 echo "      upgrade cluster is recommended."
                 #increase the upgrade required counter
                 WKCLUSTERUPGRADEREQUIRED=$((WKCLUSTERUPGRADEREQUIRED + 1))
-
+                WKCLUSTERTOUPGRADE="$WKCLUSTERTOUPGRADE $WKCLUSTER"
                 #Get the provider for each workload cluster
                 WKCLUSTERJSON=$(kubectl get cluster $WKCLUSTER -n $CLUSTERNAMESPACE -o json)
                 WORKLOADCLUSTERPROVIDER=$(get_cluster_infra_provider "$WKCLUSTER" "$CLUSTERNAMESPACE")
@@ -492,11 +495,13 @@ fi
 if [[ "$KOMMANDERVERSION" != "Kommander not found" ]]; then
     if [[ "$WKSPACEUPGRADEREQUIRED" -gt 0 ]]; then
         echo "  ⚠️  $WKSPACEUPGRADEREQUIRED Workspaces Upgrade required."
+        echo "      Workspaces to upgrade: $WKSTOUPGRADE"
         UPGRADEREQ="true"
     fi
 fi
 if [[ "$WKCLUSTERUPGRADEREQUIRED" -gt 0 ]]; then
     echo "  ⚠️  $WKCLUSTERUPGRADEREQUIRED Workload Clusters Upgrade required."
+    echo "      Workload Clusters to upgrade: $WKCLUSTERTOUPGRADE"
     UPGRADEREQ="true"
 fi
 
@@ -524,7 +529,7 @@ case $MGMTREGISTRYMIRROR in
         echo
         echo "  Example command to push airgap bundle to internal registry mirror using nkp cli:"
         echo
-        echo "  nkp push bundle --bundle <path to KONVOYIMAGES>,<path to KOMMANDERIMAGES --to-internal-registry-mirror"
+        echo "  nkp push bundle --bundle <path to KONVOYIMAGES>,<path to KOMMANDERIMAGES> --to-internal-registry-mirror"
         echo
         ;;
     "Global registry mirror"*)
