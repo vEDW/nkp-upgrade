@@ -104,10 +104,10 @@ get_nkp_cluster_registry_mirror() {
     else
         #check if registry mirror
         REGISTRYMIRROR=$(kubectl get clusters.cluster.x-k8s.io $CLUSTER_NAME -n $CLUSTERNAMESPACE -o jsonpath='{.spec.topology.variables[].value.globalImageRegistryMirror.url}')
-        if [[ "$REGISTRYMIRROR" == "mirror" ]]; then
-            echo "Global registry mirror : $REGISTRYMIRROR"
-        else
+        if [[ -z "$REGISTRYMIRROR" ]]; then
             echo "no registry mirror"
+        else
+            echo "Global registry mirror : $REGISTRYMIRROR"
         fi
     fi
 }
