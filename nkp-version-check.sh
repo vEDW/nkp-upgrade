@@ -532,7 +532,7 @@ case $MGMTREGISTRYMIRROR in
         echo
         ;;
     "Global registry mirror"*)
-        echo "  Management Cluster has global registry mirror configured."
+        echo "  Management Cluster has global registry mirror configured to: $MGMTREGISTRYMIRROR"
         echo "  please ensure you pushed airgap bundle to registry mirror before upgrading."
         echo
         echo "  Refer to documentation. Hints to be added soon."
