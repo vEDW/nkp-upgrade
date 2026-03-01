@@ -495,7 +495,7 @@ fi
 if [[ -n "$NONRUNNINGMACHINES" ]]; then
     echo "  🛑  ALERT: Found non-running machines:"
     echo
-    echo "$NONRUNNINGMACHINES"
+    kubectl get machines -A | grep -v Running
     echo
     echo "  Please check the machines and resolve the issues before upgrading."
     echo "  ========================================================="
