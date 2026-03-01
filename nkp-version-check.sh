@@ -519,6 +519,8 @@ fi
 echo
 read -p "Press enter to see upgrade hints and example commands or CTRL-C to quit"
 echo
+echo
+echo
 
 case $MGMTREGISTRYMIRROR in
 
@@ -532,7 +534,10 @@ case $MGMTREGISTRYMIRROR in
         echo
         ;;
     "Global registry mirror"*)
-        echo "  Management Cluster has global registry mirror configured to: $MGMTREGISTRYMIRROR"
+        echo "  Management Cluster has global registry mirror configured to:"
+        echo
+        echo "      $MGMTREGISTRYMIRROR"
+        echo
         echo "  please ensure you pushed airgap bundle to registry mirror before upgrading."
         echo
         echo "  Refer to documentation. Hints to be added soon."
@@ -563,6 +568,18 @@ else
         get_nkp_nx_images
         echo
     else
+        if [[ "$WKSPACEUPGRADEREQUIRED" -gt 0 ]]; then
+            echo  
+            echo "  Example command to upgrade Workspaces using nkp cli:"
+            echo
+            for WORKSPACE in $WKSTOUPGRADE; do
+                WORKSPACENS=$(echo "$WORKSPACES" |grep $WORKSPACE | awk '{print $2}')
+                echo
+                echo "  nkp upgrade workspace $WORKSPACE" 
+            done
+            echo
+        fi
+
         if [[ "$WKCLUSTERUPGRADEREQUIRED" -gt 0 ]]; then
             echo  
             echo "  Example command to upgrade Workload Cluster using nkp cli:"
