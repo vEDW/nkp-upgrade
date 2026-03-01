@@ -516,6 +516,7 @@ if [[ "$UPGRADEREQ" != "true" ]]; then
 fi
 
 # ask if hints are desired ?
+echo
 read -p "Press enter to see upgrade hints and example commands or CTRL-C to quit"
 echo
 
@@ -558,7 +559,7 @@ if [[ "$MGMTCLUSTERUPGRADEREQUIRED" == "true" ]]; then
     echo  
     echo "  Example command to upgrade Management Cluster using nkp cli:"
     echo
-    echo "  nkp upgrade cluster $NKPMGMTCLUSTER -n default --vm-image <new-os-image-name>" 
+    echo "  nkp upgrade cluster nutanix -c $NKPMGMTCLUSTER -n default --vm-image <new-os-image-name>" 
     echo
     echo "  available images are:"
     get_nkp_nx_images
@@ -571,7 +572,7 @@ if [[ "$WKCLUSTERUPGRADEREQUIRED" -gt 0 ]]; then
     echo
     for CLUSTER in $WKCLUSTERTOUPGRADE; do
         CLUSTERNAMESPACE=$(kubectl get cluster -A |grep $CLUSTER |awk '{print $1}')
-        echo "  nkp upgrade cluster $CLUSTER -n $CLUSTERNAMESPACE --vm-image <new-os-image-name>" 
+        echo "  nkp upgrade cluster nutanix -c $CLUSTER -n $CLUSTERNAMESPACE --vm-image <new-os-image-name>" 
     done
     echo
     echo "  available images are:"
