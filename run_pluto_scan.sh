@@ -25,6 +25,8 @@
 #NKP Version array
 declare -A nkp_to_k8s_version
 nkp_to_k8s_version=(
+  [v2.17.1]=v1.34.3
+  [v2.17.0]=v1.34.1
   [v2.16.1]=v1.33.5
   [v2.16.0]=v1.33.2
   [v2.15.2]=v1.32.8
