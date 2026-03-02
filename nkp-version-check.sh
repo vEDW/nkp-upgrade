@@ -330,6 +330,7 @@ else
         WORKSPACEVERSION=$(kubectl get appdeployments -n $WORKSPACENS kommander-flux |awk 'NR>1 {print $2}' |rev |cut -d"-" -f1|rev)
         if [[ -z "$WORKSPACEVERSION" ]]; then
             echo "Version not found for workspace $WORKSPACE. Please check the appdeployment object for kommander-flux in namespace $WORKSPACENS."
+            echo
             WORKSPACEVERSION="Version not found"
         else
             echo "  Workspace: $WORKSPACE, Version: $WORKSPACEVERSION"
@@ -337,17 +338,20 @@ else
             if [[ "$KOMMANDERFLUXVERSION" == "$WORKSPACEVERSION" ]]; then
                 echo "      NKP Platform app version matches Workspace version."
                 echo "      Skip workspace upgrade"
+                echo
             else
                 #check if cli version is higher than workspace version 
                 if version_gt "$KOMMANDERFLUXVERSION" "$WORKSPACEVERSION"; then
                     echo "      $KOMMANDERFLUXVERSION is higher than $WORKSPACEVERSION"
                     echo "      upgrade workspace is recommended."
+                    echo
                     #increase the upgrade required counter
                     WKSPACEUPGRADEREQUIRED=$((WKSPACEUPGRADEREQUIRED + 1))
                     WKSTOUPGRADE="$WKSTOUPGRADE $WORKSPACE"
                 else
                     echo "      $WORKSPACEVERSION is higher than $KOMMANDERFLUXVERSION"
                     echo "      upgrade NKP CLI is recommended."
+                    echo
                 fi
             fi
         fi
@@ -466,6 +470,18 @@ else
     done
 fi
 
+# Check no clusters are in non running state
+echo "Checking for non-Provisioned clusters..."
+NONRUNNINGCLUSTERS=$(kubectl get clusters.cluster.x-k8s.io -A --no-headers| grep -v Provisioned)
+if [[ -n "$NONRUNNINGCLUSTERS" ]]; then
+    echo
+    echo "  🛑  ALERT: Found non-Provisioned clusters:"
+    echo "$NONRUNNINGCLUSTERS"
+    echo
+else
+    echo "  ✅  All clusters are in Provisioned state."
+fi
+
 # Check no machine are in non running state
 echo "Checking for non-running machines..."
 NONRUNNINGMACHINES=$(kubectl get machines -A --no-headers| grep -v Running)
@@ -491,9 +507,19 @@ echo "  ========================================================="
 UPGRADEREQ="false"
 
 if [[ "$DELTAERROR" == "true" ]]; then
-    echo "  🛑  ALERT: The NKP / kubernetes version difference is greater than or equal to 2. Please check the NKP/K8S upgrade documentation."
+    echo "  🛑  ALERT: The NKP / kubernetes version difference is greater than or equal to 2."
+    echo " Please check the NKP/K8S upgrade documentation."
     echo "  ========================================================="
     exit 1
+fi
+
+if [[ -n "$NONRUNNINGCLUSTERS" ]]; then
+    echo
+    echo "  🛑  ALERT: Found non-Provisioned clusters:"
+    echo
+    kubectl get clusters.cluster.x-k8s.io -A | grep -v Provisioned
+    echo
+    echo "  ========================================================="
 fi
 
 if [[ -n "$NONRUNNINGMACHINES" ]]; then
@@ -503,7 +529,14 @@ if [[ -n "$NONRUNNINGMACHINES" ]]; then
     echo
     echo "  Please check the machines and resolve the issues before upgrading."
     echo "  ========================================================="
+fi
 
+#if either clusters or machines are non running, alert and exit
+if [[ -n "$NONRUNNINGCLUSTERS" ]] || [[ -n "$NONRUNNINGMACHINES" ]]; then
+    echo
+    echo "  Found non-Provisioned clusters or non-running machines."
+    echo "  Stopping script."
+    echo "  ========================================================="
     exit 1
 fi
 
@@ -540,85 +573,86 @@ fi
 
 if [[ "$UPGRADEREQ" != "true" ]]; then
     echo "✅  No upgrades required."
-fi
-
-# ask if hints are desired ?
-echo
-read -p "Press enter to see upgrade hints and example commands or CTRL-C to quit"
-echo
-echo
-echo
-
-case $MGMTREGISTRYMIRROR in
-
-    "internal registry mirror")
-        echo "  Management Cluster has internal registry mirror configured."
-        echo "  please ensure you pushed airgap bundle to internal registry mirror before upgrading."
-        echo
-        echo "  Example command to push airgap bundle to internal registry mirror using nkp cli:"
-        echo
-        echo "  nkp push bundle --bundle <path to KONVOYIMAGES>,<path to KOMMANDERIMAGES> --to-internal-registry-mirror"
-        echo
-        ;;
-    "Global registry mirror"*)
-        echo "  Management Cluster has global registry mirror configured to:"
-        echo
-        echo "      $MGMTREGISTRYMIRROR"
-        echo
-        echo "  please ensure you pushed airgap bundle to registry mirror before upgrading."
-        echo
-        echo "  Refer to documentation. Hints to be added soon."
-        ;;
-    "no registry mirror")
-        echo "  NKP Manament Cluster does not have a registry mirror configured."
-        echo "  Assuming online connectivity for upgrade."
-        ;;
-    *)
-        echo "  Unknown registry mirror type: $MGMTREGISTRYMIRROR. Please check the cluster configuration."
-        ;;
-esac
-
-if [[ "$KOMMANDERUPGRADEREQUIRED" == "true" ]]; then
-    echo  
-    echo "  Example command to upgrade Kommander using nkp cli:"
-    echo
-    echo "  nkp upgrade kommander" 
-    echo
 else
-    if [[ "$MGMTCLUSTERUPGRADEREQUIRED" == "true" ]]; then
+
+    # ask if hints are desired ?
+    echo
+    read -p "Press enter to see upgrade hints and example commands or CTRL-C to quit"
+    echo
+    echo
+    echo
+
+    case $MGMTREGISTRYMIRROR in
+
+        "internal registry mirror")
+            echo "  Management Cluster has internal registry mirror configured."
+            echo "  please ensure you pushed airgap bundle to internal registry mirror before upgrading."
+            echo
+            echo "  Example command to push airgap bundle to internal registry mirror using nkp cli:"
+            echo
+            echo "  nkp push bundle --bundle <path to KONVOYIMAGES>,<path to KOMMANDERIMAGES> --to-internal-registry-mirror"
+            echo
+            ;;
+        "Global registry mirror"*)
+            echo "  Management Cluster has global registry mirror configured to:"
+            echo
+            echo "      $MGMTREGISTRYMIRROR"
+            echo
+            echo "  please ensure you pushed airgap bundle to registry mirror before upgrading."
+            echo
+            echo "  Refer to documentation. Hints to be added soon."
+            ;;
+        "no registry mirror")
+            echo "  NKP Manament Cluster does not have a registry mirror configured."
+            echo "  Assuming online connectivity for upgrade."
+            ;;
+        *)
+            echo "  Unknown registry mirror type: $MGMTREGISTRYMIRROR. Please check the cluster configuration."
+            ;;
+    esac
+
+    if [[ "$KOMMANDERUPGRADEREQUIRED" == "true" ]]; then
         echo  
-        echo "  Example command to upgrade Management Cluster using nkp cli:"
+        echo "  Example command to upgrade Kommander using nkp cli:"
         echo
-        echo "  nkp upgrade cluster nutanix -c $NKPMGMTCLUSTER -n default --vm-image <new-os-image-name>" 
-        echo
-        echo "  available images are:"
-        get_nkp_nx_images
+        echo "  nkp upgrade kommander" 
         echo
     else
-        if [[ "$WKSPACEUPGRADEREQUIRED" -gt 0 ]]; then
+        if [[ "$MGMTCLUSTERUPGRADEREQUIRED" == "true" ]]; then
             echo  
-            echo "  Example command to upgrade Workspaces using nkp cli:"
+            echo "  Example command to upgrade Management Cluster using nkp cli:"
             echo
-            for WORKSPACE in $WKSTOUPGRADE; do
-                WORKSPACENS=$(echo "$WORKSPACES" |grep $WORKSPACE | awk '{print $2}')
-                echo
-                echo "  nkp upgrade workspace $WORKSPACE" 
-            done
-            echo
-        fi
-
-        if [[ "$WKCLUSTERUPGRADEREQUIRED" -gt 0 ]]; then
-            echo  
-            echo "  Example command to upgrade Workload Cluster using nkp cli:"
-            echo
-            for CLUSTER in $WKCLUSTERTOUPGRADE; do
-                CLUSTERNAMESPACE=$(kubectl get cluster -A |grep $CLUSTER |awk '{print $1}')
-                echo "  nkp upgrade cluster nutanix -c $CLUSTER -n $CLUSTERNAMESPACE --vm-image <new-os-image-name>" 
-            done
+            echo "  nkp upgrade cluster nutanix -c $NKPMGMTCLUSTER -n default --vm-image <new-os-image-name>" 
             echo
             echo "  available images are:"
             get_nkp_nx_images
             echo
+        else
+            if [[ "$WKSPACEUPGRADEREQUIRED" -gt 0 ]]; then
+                echo  
+                echo "  Example command to upgrade Workspaces using nkp cli:"
+                echo
+                for WORKSPACE in $WKSTOUPGRADE; do
+                    WORKSPACENS=$(echo "$WORKSPACES" |grep $WORKSPACE | awk '{print $2}')
+                    echo
+                    echo "  nkp upgrade workspace $WORKSPACE" 
+                done
+                echo
+            fi
+
+            if [[ "$WKCLUSTERUPGRADEREQUIRED" -gt 0 ]]; then
+                echo  
+                echo "  Example command to upgrade Workload Cluster using nkp cli:"
+                echo
+                for CLUSTER in $WKCLUSTERTOUPGRADE; do
+                    CLUSTERNAMESPACE=$(kubectl get cluster -A |grep $CLUSTER |awk '{print $1}')
+                    echo "  nkp upgrade cluster nutanix -c $CLUSTER -n $CLUSTERNAMESPACE --vm-image <new-os-image-name>" 
+                done
+                echo
+                echo "  available images are:"
+                get_nkp_nx_images
+                echo
+            fi
         fi
     fi
 fi
