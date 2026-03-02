@@ -228,11 +228,6 @@ KOMMANDERVERSION=$(kubectl get hr -n kommander kommander-appmanagement -o jsonpa
 #check if field empty
 if [[ -z "$KOMMANDERVERSION" ]]; then
     #echo "Kommander version not found. Please check if Kommander is installed."
-    KOMMANDERVERSION="Kommander not found"
-fi
-#Get the version of kommander using OciRepo (for NKP >= 2.16)
-#check if KOMMANDERVERSION is empty
-if [[ "$KOMMANDERVERSION" == "Kommander not found" ]]; then
     KOMMANDEROCINAME=$(kubectl get ocirepositories -n kommander |grep kommander-appmanagement- |awk '{print $1}')
     KOMMANDERVERSION=$(kubectl get ocirepositories -n kommander $KOMMANDEROCINAME -o jsonpath='{.spec.ref.tag}')
     if [[ -z "$KOMMANDERVERSION" ]]; then
@@ -245,6 +240,10 @@ fi
 if [[ "$KOMMANDERVERSION" == "Kommander not found" ]]; then
     KOMMANDERFLUXVERSION="Kommander not found"
     echo "Kommander is not installed. Skipping workspace version check."
+    echo
+    echo "Kommander should be present. please verify cluster state"
+
+    exit 1
 else
         echo
         echo "Kommander Version: $KOMMANDERVERSION"
