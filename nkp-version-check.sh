@@ -328,22 +328,27 @@ else
         WORKSPACENS=$(echo "$WORKSPACES" |grep $WORKSPACE | awk '{print $2}')
         WORKSPACEVERSION=""
         WORKSPACEVERSION=$(kubectl get appdeployments -n $WORKSPACENS kommander-flux |awk 'NR>1 {print $2}' |rev |cut -d"-" -f1|rev)
-        echo "  Workspace: $WORKSPACE, Version: $WORKSPACEVERSION"
-        # Check if the workspace version is compatible with the nkp version
-        if [[ "$KOMMANDERFLUXVERSION" == "$WORKSPACEVERSION" ]]; then
-            echo "      NKP Platform app version matches Workspace version."
-            echo "      Skip workspace upgrade"
+        if [[ -z "$WORKSPACEVERSION" ]]; then
+            echo "Version not found for workspace $WORKSPACE. Please check the appdeployment object for kommander-flux in namespace $WORKSPACENS."
+            WORKSPACEVERSION="Version not found"
         else
-            #check if cli version is higher than workspace version 
-            if version_gt "$KOMMANDERFLUXVERSION" "$WORKSPACEVERSION"; then
-                echo "      $KOMMANDERFLUXVERSION is higher than $WORKSPACEVERSION"
-                echo "      upgrade workspace is recommended."
-                #increase the upgrade required counter
-                WKSPACEUPGRADEREQUIRED=$((WKSPACEUPGRADEREQUIRED + 1))
-                WKSTOUPGRADE="$WKSTOUPGRADE $WORKSPACE"
+            echo "  Workspace: $WORKSPACE, Version: $WORKSPACEVERSION"
+            # Check if the workspace version is compatible with the nkp version
+            if [[ "$KOMMANDERFLUXVERSION" == "$WORKSPACEVERSION" ]]; then
+                echo "      NKP Platform app version matches Workspace version."
+                echo "      Skip workspace upgrade"
             else
-                echo "      $WORKSPACEVERSION is higher than $KOMMANDERFLUXVERSION"
-                echo "      upgrade NKP CLI is recommended."
+                #check if cli version is higher than workspace version 
+                if version_gt "$KOMMANDERFLUXVERSION" "$WORKSPACEVERSION"; then
+                    echo "      $KOMMANDERFLUXVERSION is higher than $WORKSPACEVERSION"
+                    echo "      upgrade workspace is recommended."
+                    #increase the upgrade required counter
+                    WKSPACEUPGRADEREQUIRED=$((WKSPACEUPGRADEREQUIRED + 1))
+                    WKSTOUPGRADE="$WKSTOUPGRADE $WORKSPACE"
+                else
+                    echo "      $WORKSPACEVERSION is higher than $KOMMANDERFLUXVERSION"
+                    echo "      upgrade NKP CLI is recommended."
+                fi
             fi
         fi
     done
