@@ -224,7 +224,8 @@ echo "NKP Management Cluster Provider: $NKPPROVIDER"
 
 KOMMANDERUPGRADEREQUIRED="false"
 #Get the version of kommander using HelmRelease (for NKP <2.16)
-KOMMANDERVERSION=$(kubectl get hr -n kommander kommander-appmanagement -o jsonpath='{.spec.chart.spec.version}')
+#KOMMANDERVERSION=$(kubectl get hr -n kommander kommander-appmanagement -o jsonpath='{.spec.chart.spec.version}')
+KOMMANDERVERSION=$(kubectl get kommandercore kommander-core -o jsonpath='{.spec.version}')
 #check if field empty
 if [[ -z "$KOMMANDERVERSION" ]]; then
     #echo "Kommander version not found. Please check if Kommander is installed."
