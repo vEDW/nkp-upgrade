@@ -117,7 +117,7 @@ get_cluster_infra_provider() {
     CLUSTER_NAME="$1"
     CLUSTERNAMESPACE="$2"
 
-    PROVIDER=$(kubectl get clusters.cluster.x-k8s.io $CLUSTER_NAME -n $CLUSTERNAMESPACE -o jsonpath='{.metadata.labels."konvoy.d2iq.io/provider"}')
+    PROVIDER=$(kubectl get clusters.cluster.x-k8s.io $CLUSTER_NAME -n $CLUSTERNAMESPACE  -o jsonpath='{.metadata.labels}' |jq -r '."konvoy.d2iq.io/provider"')
     if [[ -z "$PROVIDER" ]]; then
         echo "Provider not found for cluster $CLUSTER_NAME. Please check the cluster object."
         return 1
