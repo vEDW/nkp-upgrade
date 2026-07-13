@@ -605,12 +605,23 @@ else
     case $MGMTREGISTRYMIRROR in
 
         "internal registry mirror")
+            BUNDLEPATHROOT=$(cat ./bundle-path | xargs dirname)
+            BUNDLEFILELIST=$(ls -m $BUNDLEPATHROOT/container-images/*.tar)
+            if [[ -z "$BUNDLEFILELIST" ]]; then
+                echo "  🛑  ALERT: No airgap bundle found in $BUNDLEPATHROOT/container-images/"
+                echo "      Please ensure you have the airgap bundle for NKP version $NKPVER downloaded and placed in $BUNDLEPATHROOT/container-images/"
+                echo
+            else
+                echo "  Airgap bundle found in $BUNDLEPATHROOT/container-images/:"
+                echo "      $BUNDLEFILELIST"
+                echo
+            fi
             echo "  Management Cluster has internal registry mirror configured."
             echo "  please ensure you pushed airgap bundle to internal registry mirror before upgrading."
             echo
             echo "  Example command to push airgap bundle to internal registry mirror using nkp cli:"
             echo
-            echo "  $BUNDLEPATH/nkp push bundle --bundle <path to KONVOYIMAGES>,<path to KOMMANDERIMAGES> --to-internal-registry-mirror"
+            echo "  $BUNDLEPATH/nkp push bundle --bundle $BUNDLEFILELIST --to-internal-registry-mirror"
             echo
             ;;
         "Global registry mirror"*)
