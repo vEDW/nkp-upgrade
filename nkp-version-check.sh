@@ -201,7 +201,7 @@ echo "Checking nkp cli version..."
 echo 
 
 # Get the installed version of nkp
-NKPVER=$($BUNDLEPATH/nkp version |grep nkp |awk '{print $2}')
+NKPVER=$($BUNDLEPATH/cli/nkp version |grep nkp |awk '{print $2}')
 
 echo
 echo "NKP cli path: $BUNDLEPATH"
