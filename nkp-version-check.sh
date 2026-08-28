@@ -606,13 +606,13 @@ else
 
         "internal registry mirror")
             BUNDLEPATHROOT=$(cat ./bundle-path | xargs dirname)
-            BUNDLEFILELIST=$(ls -m $BUNDLEPATHROOT/container-images/*.tar)
+            BUNDLEFILELIST=$(ls -m $BUNDLEPATH/container-images/*.tar)
             if [[ -z "$BUNDLEFILELIST" ]]; then
-                echo "  🛑  ALERT: No airgap bundle found in $BUNDLEPATHROOT/container-images/"
-                echo "      Please ensure you have the airgap bundle for NKP version $NKPVER downloaded and placed in $BUNDLEPATHROOT/container-images/"
+                echo "  🛑  ALERT: No airgap bundle found in $BUNDLEPATH/container-images/"
+                echo "      Please ensure you have the airgap bundle for NKP version $NKPVER downloaded and placed in $BUNDLEPATH/container-images/"
                 echo
             else
-                echo "  Airgap bundle found in $BUNDLEPATHROOT/container-images/:"
+                echo "  Airgap bundle found in $BUNDLEPATH/container-images/:"
                 echo "      $BUNDLEFILELIST"
                 echo
             fi
