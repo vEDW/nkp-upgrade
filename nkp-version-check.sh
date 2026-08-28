@@ -621,7 +621,7 @@ else
             echo
             echo "  Example command to push airgap bundle to internal registry mirror using nkp cli:"
             echo
-            echo "  $BUNDLEPATH/nkp push bundle --bundle $BUNDLEFILELIST --to-internal-registry-mirror"
+            echo "  $BUNDLEPATH/cli/nkp push bundle --bundle $BUNDLEFILELIST --to-internal-registry-mirror"
             echo
             ;;
         "Global registry mirror"*)
@@ -653,7 +653,7 @@ else
             echo  
             echo "  Example command to upgrade Management Cluster using nkp cli:"
             echo
-            echo "  $BUNDLEPATH/nkp upgrade cluster nutanix -c $NKPMGMTCLUSTER -n default --vm-image <new-os-image-name>" 
+            echo "  $BUNDLEPATH/cli/nkp upgrade cluster nutanix -c $NKPMGMTCLUSTER -n default --vm-image <new-os-image-name>" 
             echo
             echo "  available images are:"
             get_nkp_nx_images
@@ -666,7 +666,7 @@ else
                 for WORKSPACE in $WKSTOUPGRADE; do
                     WORKSPACENS=$(echo "$WORKSPACES" |grep $WORKSPACE | awk '{print $2}')
                     echo
-                    echo "  $BUNDLEPATH/nkp upgrade workspace $WORKSPACE" 
+                    echo "  $BUNDLEPATH/cli/nkp upgrade workspace $WORKSPACE" 
                 done
                 echo
             fi
@@ -677,7 +677,7 @@ else
                 echo
                 for CLUSTER in $WKCLUSTERTOUPGRADE; do
                     CLUSTERNAMESPACE=$(kubectl get cluster -A |grep $CLUSTER |awk '{print $1}')
-                    echo "  $BUNDLEPATH/nkp upgrade cluster nutanix -c $CLUSTER -n $CLUSTERNAMESPACE --vm-image <new-os-image-name>" 
+                    echo "  $BUNDLEPATH/cli/nkp upgrade cluster nutanix -c $CLUSTER -n $CLUSTERNAMESPACE --vm-image <new-os-image-name>" 
                 done
                 echo
                 echo "  available images are:"
