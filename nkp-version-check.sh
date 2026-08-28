@@ -646,7 +646,7 @@ else
         echo  
         echo "  Example command to upgrade Kommander using nkp cli:"
         echo
-        echo "  $BUNDLEPATH/nkp upgrade kommander" 
+        echo "  $BUNDLEPATH/cli/nkp upgrade kommander" 
         echo
     else
         if [[ "$MGMTCLUSTERUPGRADEREQUIRED" == "true" ]]; then
