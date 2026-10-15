@@ -185,7 +185,7 @@ fi
 #check if bundle-path file exists
 if [[ ! -f "./bundle-path" ]]; then
     echo "bundle-path file not found. Proceeding with default nkp path."
-    BUNDLEPATH=$(which nkp | xargs dirname)
+    NKPCLIPATH=$(which nkp | xargs dirname)
     #check if nkp cli is installed
     if [ $? -ne 0 ]; then
         echo "nkp command not found. Please install nkp first."
@@ -194,6 +194,7 @@ if [[ ! -f "./bundle-path" ]]; then
 else
     BUNDLEPATH=$(cat ./bundle-path)
     echo "Using bundle path: $BUNDLEPATH"
+    NKPCLIPATH=$BUNDLEPATH"/cli"
 fi    
 
 echo
@@ -201,7 +202,7 @@ echo "Checking nkp cli version..."
 echo 
 
 # Get the installed version of nkp
-NKPVER=$($BUNDLEPATH/cli/nkp version |grep nkp |awk '{print $2}')
+NKPVER=$($NKPCLIPATH/nkp version |grep nkp |awk '{print $2}')
 
 echo
 echo "NKP cli path: $BUNDLEPATH"
@@ -621,7 +622,7 @@ else
             echo
             echo "  Example command to push airgap bundle to internal registry mirror using nkp cli:"
             echo
-            echo "  $BUNDLEPATH/cli/nkp push bundle --bundle $BUNDLEFILELIST --to-internal-registry-mirror"
+            echo "  $NKPCLIPATH/nkp push bundle --bundle $BUNDLEFILELIST --to-internal-registry-mirror"
             echo
             ;;
         "Global registry mirror"*)
@@ -646,14 +647,14 @@ else
         echo  
         echo "  Example command to upgrade Kommander using nkp cli:"
         echo
-        echo "  $BUNDLEPATH/cli/nkp upgrade kommander" 
+        echo "  $NKPCLIPATH/nkp upgrade kommander" 
         echo
     else
         if [[ "$MGMTCLUSTERUPGRADEREQUIRED" == "true" ]]; then
             echo  
             echo "  Example command to upgrade Management Cluster using nkp cli:"
             echo
-            echo "  $BUNDLEPATH/cli/nkp upgrade cluster nutanix -c $NKPMGMTCLUSTER -n default --vm-image <new-os-image-name>" 
+            echo "  $NKPCLIPATH/nkp upgrade cluster nutanix -c $NKPMGMTCLUSTER -n default --vm-image <new-os-image-name>" 
             echo
             echo "  available images are:"
             get_nkp_nx_images
@@ -666,7 +667,7 @@ else
                 for WORKSPACE in $WKSTOUPGRADE; do
                     WORKSPACENS=$(echo "$WORKSPACES" |grep $WORKSPACE | awk '{print $2}')
                     echo
-                    echo "  $BUNDLEPATH/cli/nkp upgrade workspace $WORKSPACE" 
+                    echo "  $NKPCLIPATH/nkp upgrade workspace $WORKSPACE" 
                 done
                 echo
             fi
@@ -677,7 +678,7 @@ else
                 echo
                 for CLUSTER in $WKCLUSTERTOUPGRADE; do
                     CLUSTERNAMESPACE=$(kubectl get cluster -A |grep $CLUSTER |awk '{print $1}')
-                    echo "  $BUNDLEPATH/cli/nkp upgrade cluster nutanix -c $CLUSTER -n $CLUSTERNAMESPACE --vm-image <new-os-image-name>" 
+                    echo "  $NKPCLIPATH/nkp upgrade cluster nutanix -c $CLUSTER -n $CLUSTERNAMESPACE --vm-image <new-os-image-name>" 
                 done
                 echo
                 echo "  available images are:"
